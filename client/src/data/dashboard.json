@@ -1,0 +1,93 @@
+{
+  "campaign": {
+    "title": "Auditoria de Campanha: RODOVIDA 2026 (ID #6994)",
+    "period": "12/01/2026 - 11/02/2026",
+    "agency": "Cálix",
+    "client": "Ministério dos Transportes",
+    "auditStatus": {
+      "percentage": 100,
+      "verifier": "AD Desk Verifier"
+    }
+  },
+  "structure": [
+    {
+      "name": "GO ON MÍDIA",
+      "contracted": 8291231,
+      "delivered": 7123448,
+      "pacing": 32,
+      "impressions": 7123448,
+      "viewables": 2426628,
+      "va": 106,
+      "clicks": 14231,
+      "ctr": 0.42,
+      "views": 14231,
+      "vtr": 0.42,
+      "children": [
+        {
+          "name": "Display Banner 300x250",
+          "contracted": 9123441,
+          "delivered": 9123123,
+          "pacing": 75,
+          "impressions": 9123123,
+          "viewables": 2426628,
+          "va": 106,
+          "clicks": 8123,
+          "ctr": 0.42,
+          "views": 8123,
+          "vtr": 0.42
+        },
+        {
+          "name": "Criativo: Familia_v2",
+          "contracted": 9123441,
+          "delivered": 9123123,
+          "pacing": 51,
+          "impressions": 9123123,
+          "viewables": 2426628,
+          "va": 106,
+          "clicks": 8123,
+          "ctr": 0.42,
+          "views": 8123,
+          "vtr": 0.42
+        }
+      ]
+    },
+    {
+      "name": "VEÍCULO",
+      "contracted": 8291231,
+      "delivered": 7123448,
+      "pacing": 97,
+      "impressions": 7123448,
+      "viewables": 2426628,
+      "va": 106,
+      "clicks": 14231,
+      "ctr": 0.42,
+      "views": 14231,
+      "vtr": 0.42,
+      "children": []
+    }
+  ],
+  "charts": {
+    "dailyDelivery": {
+      "title": "Entrega Diária vs. Viewability",
+      "data": [
+        { "date": "01/08", "delivery": 12000, "viewability": 10500 },
+        { "date": "01/09", "delivery": 11500, "viewability": 11200 },
+        { "date": "01/10", "delivery": 13200, "viewability": 12800 },
+        { "date": "01/11", "delivery": 10800, "viewability": 9500 },
+        { "date": "01/12", "delivery": 9200, "viewability": 8900 },
+        { "date": "01/01", "delivery": 10500, "viewability": 10200 },
+        { "date": "01/02", "delivery": 12500, "viewability": 12100 }
+      ]
+    },
+    "geographicDistribution": {
+      "title": "Distribuição Geográfica (Top 5 Estados)",
+      "data": [
+        { "state": "SP", "value": 35, "color": "#1e40af" },
+        { "state": "RJ", "value": 25, "color": "#3b82f6" },
+        { "state": "DF", "value": 18, "color": "#60a5fa" },
+        { "state": "MG", "value": 15, "color": "#93c5fd" },
+        { "state": "PE", "value": 7, "color": "#dbeafe" }
+      ]
+    }
+  }
+}
