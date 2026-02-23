@@ -7,15 +7,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import dashboardData from "@/data/dashboard.json";
 import { aggregateItem, type StructureItem } from "@/lib/aggregateStructure";
 
 interface ReportModalProps {
   open: boolean;
   onClose: () => void;
+  campaign: {
+    title: string;
+    period: string;
+    agency: string;
+    client: string;
+    auditStatus: { percentage: number; verifier: string };
+  };
+  structure: StructureItem[];
 }
 
-type ReportType = "geral" | string; // string = nome do veículo
+type ReportType = "geral" | string;
 
 function itemToRow(item: StructureItem, prefix = ""): Record<string, unknown> {
   const pacing = Math.round((item.delivered / item.contracted) * 100);
@@ -34,7 +41,6 @@ function itemToRow(item: StructureItem, prefix = ""): Record<string, unknown> {
   };
 }
 
-// Achata estrutura do veículo usando valores agregados no pai
 function flattenStructure(items: StructureItem[]): Record<string, unknown>[] {
   const rows: Record<string, unknown>[] = [];
   for (const raw of items) {
@@ -49,9 +55,10 @@ function flattenStructure(items: StructureItem[]): Record<string, unknown>[] {
   return rows;
 }
 
-function buildRows(reportType: ReportType): Record<string, unknown>[] {
-  const { structure } = dashboardData;
-
+function buildRows(
+  reportType: ReportType,
+  structure: StructureItem[]
+): Record<string, unknown>[] {
   if (reportType === "geral") {
     const contracted  = structure.reduce((s, v) => s + v.contracted, 0);
     const delivered   = structure.reduce((s, v) => s + v.delivered, 0);
@@ -73,7 +80,6 @@ function buildRows(reportType: ReportType): Record<string, unknown>[] {
     return [...summary, {}, ...flattenStructure(structure)] as Record<string, unknown>[];
   }
 
-  // por veículo específico
   const vehicle = structure.find((v) => v.name === reportType);
   if (!vehicle) return [];
   return flattenStructure([vehicle]);
@@ -107,14 +113,12 @@ function downloadExcel(rows: Record<string, unknown>[], filename: string) {
   XLSX.writeFile(wb, filename);
 }
 
-export function ReportModal({ open, onClose }: ReportModalProps) {
+export function ReportModal({ open, onClose, campaign, structure }: ReportModalProps) {
   const [mode, setMode] = useState<"geral" | "veiculo">("geral");
   const [selectedVehicle, setSelectedVehicle] = useState<string>("");
-  const { campaign, structure } = dashboardData;
 
   const vehicleNames = structure.map((v) => v.name);
 
-  // garante que sempre haja um veículo selecionado ao trocar para o modo veículo
   function handleModeChange(next: "geral" | "veiculo") {
     setMode(next);
     if (next === "veiculo" && !selectedVehicle) {
@@ -131,7 +135,7 @@ export function ReportModal({ open, onClose }: ReportModalProps) {
 
   function handleDownload(format: "csv" | "excel") {
     if (mode === "veiculo" && !selectedVehicle) return;
-    const rows = buildRows(reportType);
+    const rows = buildRows(reportType, structure);
     if (format === "csv") downloadCSV(rows, filename("csv"));
     else downloadExcel(rows, filename("xlsx"));
     onClose();

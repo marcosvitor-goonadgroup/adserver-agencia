@@ -1,5 +1,6 @@
 import express from "express";
 import { createServer } from "http";
+import { createProxyMiddleware } from "http-proxy-middleware";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -17,6 +18,16 @@ async function startServer() {
       : path.resolve(__dirname, "..", "dist", "public");
 
   app.use(express.static(staticPath));
+
+  // Proxy /api/* → https://adserver-api.vercel.app/*
+  app.use(
+    "/api",
+    createProxyMiddleware({
+      target: "https://adserver-api.vercel.app",
+      changeOrigin: true,
+      pathRewrite: { "^/api": "" },
+    })
+  );
 
   // Handle client-side routing - serve index.html for all routes
   app.get("*", (_req, res) => {

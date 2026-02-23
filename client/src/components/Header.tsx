@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ReportModal } from "@/components/ReportModal";
+import { type StructureItem } from "@/lib/aggregateStructure";
 
 interface HeaderProps {
   campaign: {
@@ -14,9 +15,10 @@ interface HeaderProps {
       verifier: string;
     };
   };
+  structure: StructureItem[];
 }
 
-export function Header({ campaign }: HeaderProps) {
+export function Header({ campaign, structure }: HeaderProps) {
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
@@ -59,7 +61,12 @@ export function Header({ campaign }: HeaderProps) {
         </div>
       </div>
 
-      <ReportModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <ReportModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        campaign={campaign}
+        structure={structure}
+      />
     </>
   );
 }
