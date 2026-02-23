@@ -1,45 +1,34 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import https from "https";
 
-const API_TARGET_HOST = "adserver-api.vercel.app";
+export const config = {
+  runtime: "nodejs20.x",
+};
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
-  const pathSegments = (req.query.path as string[]) ?? [];
-  const pathname = "/" + pathSegments.join("/");
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const segments = Array.isArray(req.query.path)
+    ? req.query.path
+    : [req.query.path ?? ""];
 
-  // Preserve query string (ex: dateBegin=...&dateEnd=...)
-  const fullUrl = req.url ?? "";
-  const qIndex = fullUrl.indexOf("?");
-  const search = qIndex !== -1 ? fullUrl.slice(qIndex) : "";
+  const pathname = segments.join("/");
 
-  const targetPath = pathname + search;
+  // Preserve query string, removing the internal "path" param
+  const url = new URL(req.url ?? "", "http://localhost");
+  url.searchParams.delete("path");
+  const search = url.search;
 
-  const options: https.RequestOptions = {
-    hostname: API_TARGET_HOST,
-    path: targetPath,
-    method: req.method ?? "GET",
-    headers: {
-      Accept: "application/json",
-    },
-  };
+  const target = `https://adserver-api.vercel.app/${pathname}${search}`;
 
-  const proxyReq = https.request(options, (proxyRes) => {
-    res.status(proxyRes.statusCode ?? 200);
-    res.setHeader(
-      "Content-Type",
-      proxyRes.headers["content-type"] ?? "application/json"
-    );
+  console.log("[proxy]", req.method, target);
 
-    const chunks: Buffer[] = [];
-    proxyRes.on("data", (chunk: Buffer) => chunks.push(chunk));
-    proxyRes.on("end", () => {
-      res.send(Buffer.concat(chunks));
-    });
+  const upstream = await fetch(target, {
+    method: req.method,
+    headers: { Accept: "application/json" },
   });
 
-  proxyReq.on("error", (err) => {
-    res.status(502).json({ error: "Proxy error", detail: err.message });
-  });
+  const data = await upstream.text();
 
-  proxyReq.end();
+  res
+    .status(upstream.status)
+    .setHeader("Content-Type", "application/json")
+    .send(data);
 }

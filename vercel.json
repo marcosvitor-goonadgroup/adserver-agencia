@@ -2,7 +2,20 @@
   "buildCommand": "vite build",
   "outputDirectory": "dist/public",
   "installCommand": "npx pnpm@10.4.1 install --no-frozen-lockfile",
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+  "functions": {
+    "api/[...path].ts": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "routes": [
+    { "handle": "filesystem" },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
   ]
 }
