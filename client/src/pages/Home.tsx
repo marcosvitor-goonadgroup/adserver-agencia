@@ -97,19 +97,16 @@ export default function Home() {
           return;
         }
 
-        // Use campaign date range or fall back to last 30 days
-        const today = new Date();
-        const defaultEnd = today.toISOString().slice(0, 10);
-        const defaultStart = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .slice(0, 10);
+        // dateBegin = data de criação da campanha
+        // dateEnd   = finish_at (se existir) ou ontem (campanha ainda rodando)
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().slice(0, 10);
 
-        const dateBegin = campaign.limits.start_at
-          ? campaign.limits.start_at.slice(0, 10)
-          : defaultStart;
+        const dateBegin = campaign.created_at.slice(0, 10);
         const dateEnd = campaign.limits.finish_at
           ? campaign.limits.finish_at.slice(0, 10)
-          : defaultEnd;
+          : yesterdayStr;
 
         const report = await fetchCampaignReport(campaignId, dateBegin, dateEnd);
 
