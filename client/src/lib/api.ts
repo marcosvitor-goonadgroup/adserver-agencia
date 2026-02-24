@@ -27,15 +27,41 @@ export interface Campaign {
   updated_at: string;
 }
 
+export interface DayStats {
+  requests: number;
+  impressions: number;
+  impressions_unique: number;
+  views: number;
+  clicks: number;
+  clicks_unique: number;
+  conversions: number;
+  amount: number;
+}
+
+export interface ReportAd {
+  ad_id: number;
+  ad_name: string;
+  stats: DayStats;
+  video: unknown;
+}
+
+export interface ReportZone {
+  zone_id: number;
+  zone_name: string | null;
+  stats: DayStats | null;
+  ads: ReportAd[];
+}
+
+export interface ReportDay {
+  date: string;
+  stats: DayStats | null;
+  zones: ReportZone[];
+}
+
 export interface ReportSite {
   site_id: number;
   site_name: string;
-  impressions: number;
-  clicks: number;
-  views: number;
-  viewables: number;
-  contracted?: number;
-  delivered?: number;
+  days: ReportDay[];
 }
 
 export interface CampaignReport {

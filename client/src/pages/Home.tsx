@@ -6,7 +6,19 @@ import { StructureTable } from "@/components/StructureTable";
 import { DailyDeliveryChart } from "@/components/DailyDeliveryChart";
 import { GeographicMap } from "@/components/GeographicMap";
 import { computeTotals, type StructureItem } from "@/lib/aggregateStructure";
-import { fetchCampaigns, fetchCampaignReport, type Campaign } from "@/lib/api";
+import {
+  fetchCampaigns,
+  fetchCampaignReport,
+  type Campaign,
+  type CampaignReport,
+  type ReportDay,
+} from "@/lib/api";
+
+interface ChartPoint {
+  date: string;
+  delivery: number;
+  viewability: number;
+}
 
 interface DashboardData {
   campaign: {
@@ -17,6 +29,7 @@ interface DashboardData {
     auditStatus: { percentage: number; verifier: string };
   };
   structure: StructureItem[];
+  chartData: ChartPoint[];
 }
 
 function formatDate(dateStr: string | null): string {
@@ -24,7 +37,32 @@ function formatDate(dateStr: string | null): string {
   return dateStr.slice(0, 10).split("-").reverse().join("/");
 }
 
-function buildDashboardData(campaign: Campaign, report: { sites: { site_id: number; site_name: string; impressions: number; clicks: number; views: number; viewables: number }[] }): DashboardData {
+// Soma stats de todos os dias de um site
+function sumDays(days: ReportDay[]) {
+  let impressions = 0, views = 0, clicks = 0;
+  for (const day of days) {
+    if (!day.stats) continue;
+    impressions += day.stats.impressions;
+    views       += day.stats.views;
+    clicks      += day.stats.clicks;
+  }
+  return { impressions, views, clicks };
+}
+
+// Soma stats de uma zona específica ao longo de todos os dias
+function sumZoneDays(days: ReportDay[], zoneId: number) {
+  let impressions = 0, views = 0, clicks = 0;
+  for (const day of days) {
+    const zone = day.zones.find((z) => z.zone_id === zoneId);
+    if (!zone?.stats) continue;
+    impressions += zone.stats.impressions;
+    views       += zone.stats.views;
+    clicks      += zone.stats.clicks;
+  }
+  return { impressions, views, clicks };
+}
+
+function buildDashboardData(campaign: Campaign, report: CampaignReport): DashboardData {
   const startAt = formatDate(campaign.limits.start_at);
   const finishAt = formatDate(campaign.limits.finish_at);
   const period = startAt && finishAt ? `${startAt} - ${finishAt}` : "—";
@@ -32,34 +70,80 @@ function buildDashboardData(campaign: Campaign, report: { sites: { site_id: numb
   const limitTotal = campaign.limits.additional?.limit_total ?? 0;
 
   const structure: StructureItem[] = report.sites.map((site) => {
-    const impressions = Number(site.impressions) || 0;
-    const viewables = Number(site.viewables) || 0;
-    const clicks = Number(site.clicks) || 0;
-    const views = Number(site.views) || 0;
+    const siteStats = sumDays(site.days);
+    const imp = siteStats.impressions;
+    const clk = siteStats.clicks;
+    const viw = siteStats.views;
 
-    const va  = impressions > 0 ? (viewables / impressions) * 100 : 0;
-    const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
-    const vtr = impressions > 0 ? (views / impressions) * 100 : 0;
+    // Coleta zonas únicas do site (usando Object para evitar Map iterator)
+    const zoneMap: Record<number, string> = {};
+    for (const day of site.days) {
+      for (const zone of day.zones) {
+        if (zone.zone_id && zone.zone_name) {
+          zoneMap[zone.zone_id] = zone.zone_name;
+        }
+      }
+    }
 
-    // Distribute contracted proportionally among sites (if we have a total limit)
+    // Cada zona vira um filho do site
+    const children: StructureItem[] = Object.entries(zoneMap).map(([idStr, zoneName]) => {
+      const zoneId = Number(idStr);
+      const zStats = sumZoneDays(site.days, zoneId);
+      const zImp = zStats.impressions;
+      const zClk = zStats.clicks;
+      const zViw = zStats.views;
+      return {
+        name: zoneName,
+        contracted: 0,
+        delivered: zImp,
+        pacing: 0,
+        impressions: zImp,
+        viewables: 0,
+        va: 0,
+        clicks: zClk,
+        ctr: zImp > 0 ? (zClk / zImp) * 100 : 0,
+        views: zViw,
+        vtr: zImp > 0 ? (zViw / zImp) * 100 : 0,
+      };
+    });
+
     const contracted = limitTotal > 0 && report.sites.length > 0
       ? Math.round(limitTotal / report.sites.length)
-      : impressions;
+      : imp;
 
     return {
       name: site.site_name,
       contracted,
-      delivered: impressions,
-      pacing: contracted > 0 ? Math.round((impressions / contracted) * 100) : 0,
-      impressions,
-      viewables,
-      va,
-      clicks,
-      ctr,
-      views,
-      vtr,
+      delivered: imp,
+      pacing: contracted > 0 ? Math.round((imp / contracted) * 100) : 0,
+      impressions: imp,
+      viewables: 0,
+      va: 0,
+      clicks: clk,
+      ctr: imp > 0 ? (clk / imp) * 100 : 0,
+      views: viw,
+      vtr: imp > 0 ? (viw / imp) * 100 : 0,
+      children: children.length > 0 ? children : undefined,
     };
   });
+
+  // Gera dados do gráfico diário somando todos os sites por data
+  const dateAcc: Record<string, { delivery: number; views: number }> = {};
+  for (const site of report.sites) {
+    for (const day of site.days) {
+      if (!day.stats) continue;
+      if (!dateAcc[day.date]) dateAcc[day.date] = { delivery: 0, views: 0 };
+      dateAcc[day.date].delivery += day.stats.impressions;
+      dateAcc[day.date].views   += day.stats.views;
+    }
+  }
+  const chartData: ChartPoint[] = Object.entries(dateAcc)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, v]) => ({
+      date: date.slice(5).replace("-", "/"),
+      delivery:    v.delivery,
+      viewability: v.views,
+    }));
 
   return {
     campaign: {
@@ -70,6 +154,7 @@ function buildDashboardData(campaign: Campaign, report: { sites: { site_id: numb
       auditStatus: { percentage: 100, verifier: "AD Desk Verifier" },
     },
     structure,
+    chartData,
   };
 }
 
@@ -147,16 +232,9 @@ export default function Home() {
     );
   }
 
-  const { campaign, structure } = data;
+  const { campaign, structure, chartData } = data;
   const { contracted, delivered, impressions, views, clicks, pacing, viewability, ctr, vtr } =
     computeTotals(structure);
-
-  // Build placeholder chart data from structure totals
-  const chartData = structure.slice(0, 7).map((s, i) => ({
-    date: `Site ${i + 1}`,
-    delivery: s.impressions,
-    viewability: s.viewables,
-  }));
 
   const geoData = [
     { state: "SP", value: 35, color: "#1e40af" },
@@ -202,16 +280,10 @@ export default function Home() {
           </div>
 
           {/* Card 2: Entregue */}
-          <MetricsCard
-            title="Entregue"
-            value={delivered.toLocaleString("pt-BR")}
-          />
+          <MetricsCard title="Entregue" value={delivered.toLocaleString("pt-BR")} />
 
           {/* Card 3: Impressões */}
-          <MetricsCard
-            title="Impressões"
-            value={impressions.toLocaleString("pt-BR")}
-          />
+          <MetricsCard title="Impressões" value={impressions.toLocaleString("pt-BR")} />
 
           {/* Card 4: Visualizações + VTR */}
           <MetricsCard
@@ -230,10 +302,7 @@ export default function Home() {
           />
 
           {/* Card 6: Viewability */}
-          <MetricsCard
-            title="Viewability (VA%)"
-            value={`${viewability.toFixed(1)}%`}
-          />
+          <MetricsCard title="Viewability (VA%)" value={`${viewability.toFixed(1)}%`} />
         </div>
 
         {/* Structure Table */}
@@ -245,7 +314,7 @@ export default function Home() {
         <div className="grid grid-cols-2 gap-6 mt-8">
           <DailyDeliveryChart
             data={chartData}
-            title="Entrega por Site vs. Viewability"
+            title="Entrega Diária vs. Visualizações"
           />
           <GeographicMap
             data={geoData}
