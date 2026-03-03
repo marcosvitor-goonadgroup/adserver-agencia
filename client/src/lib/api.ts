@@ -92,6 +92,18 @@ export interface Zone {
   format: { id: number; name: string };
 }
 
+export interface AssignedAd {
+  id: number;
+  name: string;
+  idcampaign: number;
+  is_active: boolean;
+  url?: string;
+}
+
+export interface ZoneDetail extends Zone {
+  assigned_ads: AssignedAd[] | null;
+}
+
 export interface Dict {
   ad_formats: Record<string, string>;
   zone_formats: Record<string, string>;
@@ -145,6 +157,12 @@ export async function createZone(
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { message?: string }).message ?? `Error ${res.status}`);
   }
+  return res.json();
+}
+
+export async function fetchZone(zoneId: number): Promise<ZoneDetail> {
+  const res = await fetch(`${API_BASE}/zones/${zoneId}`);
+  if (!res.ok) throw new Error(`Failed to fetch zone: ${res.status}`);
   return res.json();
 }
 
@@ -267,6 +285,62 @@ export async function fetchCampaigns(): Promise<Campaign[]> {
   return res.json();
 }
 
+export async function updateCampaign(
+  id: number,
+  body: { name?: string; rate?: number; start_date?: string; finish_date?: string }
+): Promise<Campaign> {
+  const res = await fetch(`${API_BASE}/campaigns/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? `Error ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function deleteCampaign(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/campaigns/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? `Error ${res.status}`);
+  }
+}
+
+export async function fetchCampaignAds(
+  campaignId: number
+): Promise<{ id: number; name: string; url: string; is_active: boolean }[]> {
+  const res = await fetch(`${API_BASE}/campaigns/${campaignId}/ads`);
+  if (!res.ok) throw new Error(`Failed to fetch ads: ${res.status}`);
+  return res.json();
+}
+
+export async function updateAd(
+  id: number,
+  body: { name?: string; url?: string; is_active?: boolean }
+): Promise<{ id: number; name: string }> {
+  const res = await fetch(`${API_BASE}/ads/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? `Error ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function deleteAd(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/ads/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? `Error ${res.status}`);
+  }
+}
+
 export async function fetchCampaignReport(
   id: number,
   dateBegin: string,
@@ -277,4 +351,54 @@ export async function fetchCampaignReport(
   );
   if (!res.ok) throw new Error(`Failed to fetch report: ${res.status}`);
   return res.json();
+}
+
+// ── Site & Zone CRUD ──────────────────────────────────────────────────────────
+
+export async function updateSite(
+  id: number,
+  body: { name: string; url: string; idcategory?: number }
+): Promise<Site> {
+  const res = await fetch(`${API_BASE}/sites/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? `Error ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function deleteSite(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/sites/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? `Error ${res.status}`);
+  }
+}
+
+export async function updateZone(
+  id: number,
+  body: { name?: string; is_active?: boolean }
+): Promise<Zone> {
+  const res = await fetch(`${API_BASE}/zones/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? `Error ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function deleteZone(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/zones/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? `Error ${res.status}`);
+  }
 }
