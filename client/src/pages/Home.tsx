@@ -14,6 +14,7 @@ import {
   fetchSheetCampaignData,
   type Campaign,
   type CampaignReport,
+  type ReportAd,
   type ReportDay,
   type ViewabilityRow,
   type VastRow,
@@ -76,18 +77,38 @@ function sumZoneDays(days: ReportDay[], zoneId: number) {
 // Cores em tons de azul da marca
 const GEO_COLORS = ["#153ece", "#1e4fe0", "#3b6ef5", "#6090f8", "#93b5fb", "#bdd3fd"];
 
-function buildGeoData(vastRows: VastRow[]): GeoPoint[] {
-  const regionMap: Record<string, number> = {};
+// Mapeamento nome completo do estado → sigla (retornado pelo ip-api em pt-BR)
+const ESTADO_SIGLA: Record<string, string> = {
+  "Acre": "AC", "Alagoas": "AL", "Amapá": "AP", "Amazonas": "AM",
+  "Bahia": "BA", "Ceará": "CE", "Distrito Federal": "DF",
+  "Espírito Santo": "ES", "Goiás": "GO", "Maranhão": "MA",
+  "Mato Grosso": "MT", "Mato Grosso do Sul": "MS", "Minas Gerais": "MG",
+  "Pará": "PA", "Paraíba": "PB", "Paraná": "PR", "Pernambuco": "PE",
+  "Piauí": "PI", "Rio de Janeiro": "RJ", "Rio Grande do Norte": "RN",
+  "Rio Grande do Sul": "RS", "Rondônia": "RO", "Roraima": "RR",
+  "Santa Catarina": "SC", "São Paulo": "SP", "Sergipe": "SE",
+  "Tocantins": "TO",
+};
+
+function buildGeoData(vastRows: VastRow[], viewRows: ViewabilityRow[]): GeoPoint[] {
+  // Combina VAST (vídeo) + Viewability (display) para cobertura geográfica completa
+  const stateMap: Record<string, number> = {};
   for (const row of vastRows) {
-    const r = row.region || row.country || "Desconhecido";
-    regionMap[r] = (regionMap[r] || 0) + (Number(row.Impression) || 0);
+    const sigla = ESTADO_SIGLA[row.region ?? ""];
+    if (!sigla) continue;
+    stateMap[sigla] = (stateMap[sigla] || 0) + (Number(row.Impression) || 0);
   }
-  const total = Object.values(regionMap).reduce((s, v) => s + v, 0) || 1;
-  const sorted = Object.entries(regionMap)
+  for (const row of viewRows) {
+    const sigla = ESTADO_SIGLA[row.region ?? ""];
+    if (!sigla) continue;
+    stateMap[sigla] = (stateMap[sigla] || 0) + (Number(row.Viewable) || 0);
+  }
+  const total = Object.values(stateMap).reduce((s, v) => s + v, 0) || 1;
+  const sorted = Object.entries(stateMap)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 6);
-  return sorted.map(([region, value], i) => ({
-    state: region.length > 2 ? region.slice(0, 2).toUpperCase() : region.toUpperCase(),
+  return sorted.map(([sigla, value], i) => ({
+    state: sigla,
     value: Math.round((value / total) * 100),
     color: GEO_COLORS[i] || "#93b5fb",
   }));
@@ -146,11 +167,15 @@ function buildDashboardData(
     const clk = siteStats.clicks;
     const viw = siteStats.views;
 
-    const zoneMap: Record<number, string> = {};
+    // Collect unique zones with their ads (use first day that has them)
+    const zoneMap: Record<number, { name: string; ads: ReportAd[] }> = {};
     for (const day of site.days) {
       for (const zone of day.zones) {
-        if (zone.zone_id && zone.zone_name) {
-          zoneMap[zone.zone_id] = zone.zone_name;
+        if (!zone.zone_id) continue;
+        if (!zoneMap[zone.zone_id]) {
+          zoneMap[zone.zone_id] = { name: zone.zone_name || "", ads: zone.ads || [] };
+        } else if (zone.ads && zone.ads.length > 0 && zoneMap[zone.zone_id].ads.length === 0) {
+          zoneMap[zone.zone_id].ads = zone.ads;
         }
       }
     }
@@ -164,16 +189,42 @@ function buildDashboardData(
         ? Math.round(limitTotal / report.sites.length)
         : imp);
 
-    const children: StructureItem[] = Object.entries(zoneMap).map(([idStr, zoneName]) => {
+    const zoneChildren: StructureItem[] = Object.entries(zoneMap).map(([idStr, zoneData]) => {
       const zoneId = Number(idStr);
       const zStats = sumZoneDays(site.days, zoneId);
       const zImp = zStats.impressions;
       const zClk = zStats.clicks;
       const zViw = zStats.views;
-      const viewable = viewIdx[String(zoneId)] || 0;
+      // VA%: BQ viewability para display; fallback para views (VTR) quando não há dado BQ (vídeo)
+      const zoneKey = String(zoneId);
+      const hasBqData = zoneKey in viewIdx;
+      const viewable = hasBqData ? (viewIdx[zoneKey] || 0) : zViw;
       const va = zImp > 0 ? (viewable / zImp) * 100 : 0;
+
+      const adChildren: StructureItem[] = zoneData.ads.map((ad) => {
+        const aImp = Number(ad.stats?.impressions) || 0;
+        const aClk = Number(ad.stats?.clicks) || 0;
+        const aViw = Number(ad.stats?.views) || 0;
+        // Para vídeo (sem dado BQ na zona): VA = views/impressions
+        const aViewable = hasBqData ? 0 : aViw;
+        const aVA = aImp > 0 ? (aViewable / aImp) * 100 : 0;
+        return {
+          name: ad.ad_name || `Ad #${ad.ad_id}`,
+          contracted: 0,
+          delivered: aImp,
+          pacing: 0,
+          impressions: aImp,
+          viewables: aViewable,
+          va: aVA,
+          clicks: aClk,
+          ctr: aImp > 0 ? (aClk / aImp) * 100 : 0,
+          views: aViw,
+          vtr: aImp > 0 ? (aViw / aImp) * 100 : 0,
+        };
+      });
+
       return {
-        name: zoneName,
+        name: zoneData.name,
         contracted: 0,
         delivered: zImp,
         pacing: 0,
@@ -184,10 +235,11 @@ function buildDashboardData(
         ctr: zImp > 0 ? (zClk / zImp) * 100 : 0,
         views: zViw,
         vtr: zImp > 0 ? (zViw / zImp) * 100 : 0,
+        children: adChildren.length > 0 ? adChildren : undefined,
       };
     });
 
-    const siteViewable = children.reduce((s, c) => s + (c.viewables || 0), 0);
+    const siteViewable = zoneChildren.reduce((s, c) => s + (c.viewables || 0), 0);
     const siteVA = imp > 0 ? (siteViewable / imp) * 100 : 0;
 
     return {
@@ -202,7 +254,7 @@ function buildDashboardData(
       ctr: imp > 0 ? (clk / imp) * 100 : 0,
       views: viw,
       vtr: imp > 0 ? (viw / imp) * 100 : 0,
-      children: children.length > 0 ? children : undefined,
+      children: zoneChildren.length > 0 ? zoneChildren : undefined,
     };
   });
 
@@ -223,7 +275,7 @@ function buildDashboardData(
       viewability: v.views,
     }));
 
-  const geoData = buildGeoData(vastRows);
+  const geoData = buildGeoData(vastRows, viewRows);
 
   return {
     campaign: {

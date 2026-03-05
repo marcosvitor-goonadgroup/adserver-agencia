@@ -39,7 +39,7 @@ export interface DayStats {
 }
 
 export interface ReportAd {
-  ad_id: number;
+  ad_id: number | string;
   ad_name: string;
   stats: DayStats;
   video: unknown;
