@@ -31,6 +31,8 @@ interface GeoPoint {
   state: string;
   value: number;
   color: string;
+  inLegend?: boolean;
+  intensity?: number;
 }
 
 interface DashboardData {
@@ -88,6 +90,20 @@ const ESTADO_SIGLA: Record<string, string> = {
   "Rio Grande do Sul": "RS", "Rondônia": "RO", "Roraima": "RR",
   "Santa Catarina": "SC", "São Paulo": "SP", "Sergipe": "SE",
   "Tocantins": "TO",
+  // Variações encontradas no BQ (ip-api retorna às vezes com prefixo "Estado de/da")
+  "Estado de São Paulo": "SP", "Estado do Rio de Janeiro": "RJ",
+  "Estado de Minas Gerais": "MG", "Estado da Bahia": "BA",
+  "Estado do Paraná": "PR", "Estado do Rio Grande do Sul": "RS",
+  "Estado de Santa Catarina": "SC", "Estado de Goiás": "GO",
+  "Estado do Pará": "PA", "Estado do Ceará": "CE",
+  "Estado de Pernambuco": "PE", "Estado do Maranhão": "MA",
+  "Estado do Amazonas": "AM", "Estado do Mato Grosso": "MT",
+  "Estado do Mato Grosso do Sul": "MS", "Estado do Espírito Santo": "ES",
+  "Estado de Alagoas": "AL", "Estado da Paraíba": "PB",
+  "Estado do Rio Grande do Norte": "RN", "Estado de Sergipe": "SE",
+  "Estado de Rondônia": "RO", "Estado do Piauí": "PI",
+  "Estado do Tocantins": "TO", "Estado do Amapá": "AP",
+  "Estado de Roraima": "RR", "Estado do Acre": "AC",
 };
 
 function buildGeoData(vastRows: VastRow[], viewRows: ViewabilityRow[]): GeoPoint[] {
@@ -104,13 +120,16 @@ function buildGeoData(vastRows: VastRow[], viewRows: ViewabilityRow[]): GeoPoint
     stateMap[sigla] = (stateMap[sigla] || 0) + (Number(row.Viewable) || 0);
   }
   const total = Object.values(stateMap).reduce((s, v) => s + v, 0) || 1;
-  const sorted = Object.entries(stateMap)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 6);
+  const sorted = Object.entries(stateMap).sort(([, a], [, b]) => b - a);
+  const maxValue = sorted[0]?.[1] ?? 1;
+  // Todos os estados com dados ficam no mapa; legenda mostra top 6
   return sorted.map(([sigla, value], i) => ({
     state: sigla,
     value: Math.round((value / total) * 100),
-    color: GEO_COLORS[i] || "#93b5fb",
+    color: GEO_COLORS[Math.min(i, GEO_COLORS.length - 1)],
+    inLegend: i < 6,
+    // opacidade proporcional ao valor máximo para gradiente visual
+    intensity: value / maxValue,
   }));
 }
 
@@ -141,16 +160,16 @@ function buildDashboardData(
   viewRows: ViewabilityRow[],
   vastRows: VastRow[],
 ): DashboardData {
-  const startAt = formatDate(campaign.limits.start_at);
-  const finishAt = formatDate(campaign.limits.finish_at);
-  const period = startAt && finishAt ? `${startAt} - ${finishAt}` : "—";
-
-  // Agência: da planilha (match por nome de campanha) ou fallback para advertiser
+  // Agência e datas: da planilha (match por nome de campanha) ou fallback para adserver
   const matchingSheet = sheetRows.find(
     (r) => r.campaign.toLowerCase().includes(campaign.name.toLowerCase()) ||
            campaign.name.toLowerCase().includes(r.campaign.toLowerCase())
   );
   const agency = matchingSheet?.agency || campaign.advertiser.name;
+
+  const startAt = formatDate(campaign.limits.start_at) || matchingSheet?.dateBegin || "";
+  const finishAt = formatDate(campaign.limits.finish_at) || matchingSheet?.dateEnd || "";
+  const period = startAt && finishAt ? `${startAt} - ${finishAt}` : "—";
 
   const contractedIdx = buildContractedIndex(sheetRows);
   const viewIdx = buildViewabilityIndex(viewRows);

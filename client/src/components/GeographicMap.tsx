@@ -4,6 +4,8 @@ interface GeographicData {
   state: string;
   value: number;
   color: string;
+  inLegend?: boolean;
+  intensity?: number;
 }
 
 interface GeographicMapProps {
@@ -101,7 +103,6 @@ export function GeographicMap({ data, title }: GeographicMapProps) {
   }, []);
 
   const dataMap = new Map(data.map((d) => [d.state, d]));
-  const maxValue = data.length > 0 ? Math.max(...data.map((d) => d.value)) : 1;
 
   function handleMouseMove(
     e: React.MouseEvent<SVGPathElement>,
@@ -147,11 +148,9 @@ export function GeographicMap({ data, title }: GeographicMapProps) {
                 const stateData = dataMap.get(sigla);
                 const pathD = featureToPath(feature);
 
-                const fill = stateData
-                  ? stateData.color
-                  : "#e5e7eb";
+                const fill = stateData ? stateData.color : "#e5e7eb";
                 const opacity = stateData
-                  ? 0.4 + 0.6 * (stateData.value / maxValue)
+                  ? 0.3 + 0.7 * (stateData.intensity ?? 1)
                   : 1;
 
                 return (
@@ -189,9 +188,9 @@ export function GeographicMap({ data, title }: GeographicMapProps) {
           )}
         </div>
 
-        {/* Legenda */}
+        {/* Legenda — top 6 */}
         <div className="flex flex-col gap-3 pt-2 min-w-[120px]">
-          {data.map((item) => (
+          {data.filter((item) => item.inLegend !== false).map((item) => (
             <div key={item.state} className="flex items-center gap-2">
               <div
                 className="w-3 h-3 rounded-sm flex-shrink-0"
