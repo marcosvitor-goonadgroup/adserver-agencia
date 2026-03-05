@@ -402,3 +402,70 @@ export async function deleteZone(id: number): Promise<void> {
     throw new Error((err as { message?: string }).message ?? `Error ${res.status}`);
   }
 }
+
+// ── BigQuery types ────────────────────────────────────────────────────────────
+
+export interface ViewabilityRow {
+  Dia: string;
+  Campanha_ID: string;
+  Site_ID: string;
+  Zone_ID: string;
+  AD_ID: string;
+  country: string | null;
+  region: string | null;
+  Viewable: number;
+}
+
+export interface VastRow {
+  Dia: string;
+  Campanha_ID: string;
+  Site_ID: string;
+  Zone_ID: string;
+  AD_ID: string;
+  country: string | null;
+  region: string | null;
+  Impression: number;
+}
+
+// ── Google Sheets types ───────────────────────────────────────────────────────
+
+export interface SheetCampaignRow {
+  agency: string;
+  campaign: string;
+  vehicle: string;
+  contracted: number;
+  dateBegin: string; // DD/MM/YYYY
+  dateEnd: string;   // DD/MM/YYYY
+}
+
+// ── BigQuery & Sheets fetch functions ─────────────────────────────────────────
+
+export async function fetchCampaignViewability(
+  id: number,
+  dateBegin: string,
+  dateEnd: string
+): Promise<ViewabilityRow[]> {
+  const res = await fetch(
+    `${API_BASE}/campaigns/${id}/viewability?dateBegin=${dateBegin}&dateEnd=${dateEnd}`
+  );
+  if (!res.ok) throw new Error(`Failed to fetch viewability: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchCampaignVast(
+  id: number,
+  dateBegin: string,
+  dateEnd: string
+): Promise<VastRow[]> {
+  const res = await fetch(
+    `${API_BASE}/campaigns/${id}/vast?dateBegin=${dateBegin}&dateEnd=${dateEnd}`
+  );
+  if (!res.ok) throw new Error(`Failed to fetch VAST data: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchSheetCampaignData(): Promise<SheetCampaignRow[]> {
+  const res = await fetch(`${API_BASE}/sheets/campaign-data`);
+  if (!res.ok) throw new Error(`Failed to fetch sheet data: ${res.status}`);
+  return res.json();
+}

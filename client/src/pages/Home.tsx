@@ -9,15 +9,27 @@ import { computeTotals, type StructureItem } from "@/lib/aggregateStructure";
 import {
   fetchCampaigns,
   fetchCampaignReport,
+  fetchCampaignViewability,
+  fetchCampaignVast,
+  fetchSheetCampaignData,
   type Campaign,
   type CampaignReport,
   type ReportDay,
+  type ViewabilityRow,
+  type VastRow,
+  type SheetCampaignRow,
 } from "@/lib/api";
 
 interface ChartPoint {
   date: string;
   delivery: number;
   viewability: number;
+}
+
+interface GeoPoint {
+  state: string;
+  value: number;
+  color: string;
 }
 
 interface DashboardData {
@@ -30,6 +42,7 @@ interface DashboardData {
   };
   structure: StructureItem[];
   chartData: ChartPoint[];
+  geoData: GeoPoint[];
 }
 
 function formatDate(dateStr: string | null): string {
@@ -37,7 +50,6 @@ function formatDate(dateStr: string | null): string {
   return dateStr.slice(0, 10).split("-").reverse().join("/");
 }
 
-// Soma stats de todos os dias de um site
 function sumDays(days: ReportDay[]) {
   let impressions = 0, views = 0, clicks = 0;
   for (const day of days) {
@@ -49,7 +61,6 @@ function sumDays(days: ReportDay[]) {
   return { impressions, views, clicks };
 }
 
-// Soma stats de uma zona específica ao longo de todos os dias
 function sumZoneDays(days: ReportDay[], zoneId: number) {
   let impressions = 0, views = 0, clicks = 0;
   for (const day of days) {
@@ -62,12 +73,72 @@ function sumZoneDays(days: ReportDay[], zoneId: number) {
   return { impressions, views, clicks };
 }
 
-function buildDashboardData(campaign: Campaign, report: CampaignReport): DashboardData {
+// Cores em tons de azul da marca
+const GEO_COLORS = ["#153ece", "#1e4fe0", "#3b6ef5", "#6090f8", "#93b5fb", "#bdd3fd"];
+
+function buildGeoData(vastRows: VastRow[]): GeoPoint[] {
+  const regionMap: Record<string, number> = {};
+  for (const row of vastRows) {
+    const r = row.region || row.country || "Desconhecido";
+    regionMap[r] = (regionMap[r] || 0) + (Number(row.Impression) || 0);
+  }
+  const total = Object.values(regionMap).reduce((s, v) => s + v, 0) || 1;
+  const sorted = Object.entries(regionMap)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 6);
+  return sorted.map(([region, value], i) => ({
+    state: region.length > 2 ? region.slice(0, 2).toUpperCase() : region.toUpperCase(),
+    value: Math.round((value / total) * 100),
+    color: GEO_COLORS[i] || "#93b5fb",
+  }));
+}
+
+// Viewable acumulado por Zone_ID
+function buildViewabilityIndex(viewRows: ViewabilityRow[]): Record<string, number> {
+  const idx: Record<string, number> = {};
+  for (const row of viewRows) {
+    const k = String(row.Zone_ID);
+    idx[k] = (idx[k] || 0) + (Number(row.Viewable) || 0);
+  }
+  return idx;
+}
+
+// Contratado por veículo (site name) vindo da planilha
+function buildContractedIndex(sheetRows: SheetCampaignRow[]): Record<string, number> {
+  const idx: Record<string, number> = {};
+  for (const row of sheetRows) {
+    const k = (row.vehicle || "").toLowerCase().trim();
+    if (k) idx[k] = (idx[k] || 0) + row.contracted;
+  }
+  return idx;
+}
+
+function buildDashboardData(
+  campaign: Campaign,
+  report: CampaignReport,
+  sheetRows: SheetCampaignRow[],
+  viewRows: ViewabilityRow[],
+  vastRows: VastRow[],
+): DashboardData {
   const startAt = formatDate(campaign.limits.start_at);
   const finishAt = formatDate(campaign.limits.finish_at);
   const period = startAt && finishAt ? `${startAt} - ${finishAt}` : "—";
 
-  const limitTotal = campaign.limits.additional?.limit_total ?? 0;
+  // Agência: da planilha (match por nome de campanha) ou fallback para advertiser
+  const matchingSheet = sheetRows.find(
+    (r) => r.campaign.toLowerCase().includes(campaign.name.toLowerCase()) ||
+           campaign.name.toLowerCase().includes(r.campaign.toLowerCase())
+  );
+  const agency = matchingSheet?.agency || campaign.advertiser.name;
+
+  const contractedIdx = buildContractedIndex(sheetRows);
+  const viewIdx = buildViewabilityIndex(viewRows);
+
+  // Total contratado da planilha para esta campanha
+  const totalContractedSheet = sheetRows.reduce((s, r) => s + r.contracted, 0);
+  const limitTotal = totalContractedSheet > 0
+    ? totalContractedSheet
+    : (campaign.limits.additional?.limit_total ?? 0);
 
   const structure: StructureItem[] = report.sites.map((site) => {
     const siteStats = sumDays(site.days);
@@ -75,7 +146,6 @@ function buildDashboardData(campaign: Campaign, report: CampaignReport): Dashboa
     const clk = siteStats.clicks;
     const viw = siteStats.views;
 
-    // Coleta zonas únicas do site (usando Object para evitar Map iterator)
     const zoneMap: Record<number, string> = {};
     for (const day of site.days) {
       for (const zone of day.zones) {
@@ -85,21 +155,31 @@ function buildDashboardData(campaign: Campaign, report: CampaignReport): Dashboa
       }
     }
 
-    // Cada zona vira um filho do site
+    // Contratado: match do nome do site contra veículo na planilha
+    const siteLower = (site.site_name || "").toLowerCase().trim();
+    const contractedFromSheet = contractedIdx[siteLower] || 0;
+    const contracted = contractedFromSheet > 0
+      ? contractedFromSheet
+      : (limitTotal > 0 && report.sites.length > 0
+        ? Math.round(limitTotal / report.sites.length)
+        : imp);
+
     const children: StructureItem[] = Object.entries(zoneMap).map(([idStr, zoneName]) => {
       const zoneId = Number(idStr);
       const zStats = sumZoneDays(site.days, zoneId);
       const zImp = zStats.impressions;
       const zClk = zStats.clicks;
       const zViw = zStats.views;
+      const viewable = viewIdx[String(zoneId)] || 0;
+      const va = zImp > 0 ? (viewable / zImp) * 100 : 0;
       return {
         name: zoneName,
         contracted: 0,
         delivered: zImp,
         pacing: 0,
         impressions: zImp,
-        viewables: 0,
-        va: 0,
+        viewables: viewable,
+        va,
         clicks: zClk,
         ctr: zImp > 0 ? (zClk / zImp) * 100 : 0,
         views: zViw,
@@ -107,9 +187,8 @@ function buildDashboardData(campaign: Campaign, report: CampaignReport): Dashboa
       };
     });
 
-    const contracted = limitTotal > 0 && report.sites.length > 0
-      ? Math.round(limitTotal / report.sites.length)
-      : imp;
+    const siteViewable = children.reduce((s, c) => s + (c.viewables || 0), 0);
+    const siteVA = imp > 0 ? (siteViewable / imp) * 100 : 0;
 
     return {
       name: site.site_name,
@@ -117,8 +196,8 @@ function buildDashboardData(campaign: Campaign, report: CampaignReport): Dashboa
       delivered: imp,
       pacing: contracted > 0 ? Math.round((imp / contracted) * 100) : 0,
       impressions: imp,
-      viewables: 0,
-      va: 0,
+      viewables: siteViewable,
+      va: siteVA,
       clicks: clk,
       ctr: imp > 0 ? (clk / imp) * 100 : 0,
       views: viw,
@@ -127,7 +206,6 @@ function buildDashboardData(campaign: Campaign, report: CampaignReport): Dashboa
     };
   });
 
-  // Gera dados do gráfico diário somando todos os sites por data
   const dateAcc: Record<string, { delivery: number; views: number }> = {};
   for (const site of report.sites) {
     for (const day of site.days) {
@@ -145,16 +223,19 @@ function buildDashboardData(campaign: Campaign, report: CampaignReport): Dashboa
       viewability: v.views,
     }));
 
+  const geoData = buildGeoData(vastRows);
+
   return {
     campaign: {
       title: `Auditoria de Campanha: ${campaign.name} (ID #${campaign.id})`,
       period,
-      agency: campaign.advertiser.name,
+      agency,
       client: campaign.advertiser.name,
       auditStatus: { percentage: 100, verifier: "AD Desk Verifier" },
     },
     structure,
     chartData,
+    geoData,
   };
 }
 
@@ -182,8 +263,6 @@ export default function Home() {
           return;
         }
 
-        // dateBegin = data de criação da campanha
-        // dateEnd   = finish_at (se existir) ou ontem (campanha ainda rodando)
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayStr = yesterday.toISOString().slice(0, 10);
@@ -193,9 +272,15 @@ export default function Home() {
           ? campaign.limits.finish_at.slice(0, 10)
           : yesterdayStr;
 
-        const report = await fetchCampaignReport(campaignId, dateBegin, dateEnd);
+        // Todas as fontes em paralelo — erros de BQ/Sheets são não-fatais
+        const [report, sheetRows, viewRows, vastRows] = await Promise.all([
+          fetchCampaignReport(campaignId, dateBegin, dateEnd),
+          fetchSheetCampaignData().catch(() => [] as SheetCampaignRow[]),
+          fetchCampaignViewability(campaignId, dateBegin, dateEnd).catch(() => [] as ViewabilityRow[]),
+          fetchCampaignVast(campaignId, dateBegin, dateEnd).catch(() => [] as VastRow[]),
+        ]);
 
-        setData(buildDashboardData(campaign, report));
+        setData(buildDashboardData(campaign, report, sheetRows, viewRows, vastRows));
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "Erro ao carregar dados.");
       } finally {
@@ -232,22 +317,13 @@ export default function Home() {
     );
   }
 
-  const { campaign, structure, chartData } = data;
+  const { campaign, structure, chartData, geoData } = data;
   const { contracted, delivered, impressions, views, clicks, pacing, viewability, ctr, vtr } =
     computeTotals(structure);
-
-  const geoData = [
-    { state: "SP", value: 35, color: "#1e40af" },
-    { state: "RJ", value: 25, color: "#3b82f6" },
-    { state: "DF", value: 18, color: "#60a5fa" },
-    { state: "MG", value: 15, color: "#93c5fd" },
-    { state: "PE", value: 7, color: "#dbeafe" },
-  ];
 
   return (
     <div className="min-h-screen bg-[#f1f1f1] p-6">
       <div className="max-w-[1440px] mx-auto">
-        {/* Back link */}
         <button
           onClick={() => navigate("/")}
           className="text-[#153ece] text-sm mb-4 hover:underline flex items-center gap-1"
@@ -255,12 +331,10 @@ export default function Home() {
           ← Todas as campanhas
         </button>
 
-        {/* Header Section */}
         <Header campaign={campaign} structure={structure} />
 
-        {/* Metrics Grid */}
         <div className="grid grid-cols-6 gap-6 mb-6">
-          {/* Card 1: Contratado com pacing */}
+          {/* Contratado com pacing */}
           <div className="bg-white rounded-[34px] p-6 h-[106px] flex flex-col justify-between">
             <h3 className="text-black text-[15px] font-medium">Contratado</h3>
             <div>
@@ -271,7 +345,7 @@ export default function Home() {
                 <div className="flex-1 bg-black/10 rounded-full h-2 overflow-hidden">
                   <div
                     className="bg-[#f4af00] h-full rounded-full"
-                    style={{ width: `${pacing}%` }}
+                    style={{ width: `${Math.min(pacing, 100)}%` }}
                   />
                 </div>
                 <span className="text-[#f4af00] text-xs font-semibold shrink-0">{pacing}%</span>
@@ -279,38 +353,27 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Card 2: Entregue */}
           <MetricsCard title="Entregue" value={delivered.toLocaleString("pt-BR")} />
-
-          {/* Card 3: Impressões */}
           <MetricsCard title="Impressões" value={impressions.toLocaleString("pt-BR")} />
-
-          {/* Card 4: Visualizações + VTR */}
           <MetricsCard
             title="Visualizações"
             value={views.toLocaleString("pt-BR")}
             badge="VTR"
             badgeValue={`${vtr.toFixed(2)}%`}
           />
-
-          {/* Card 5: Cliques + CTR */}
           <MetricsCard
             title="Cliques"
             value={clicks.toLocaleString("pt-BR")}
             badge="CTR"
             badgeValue={`${ctr.toFixed(2)}%`}
           />
-
-          {/* Card 6: Viewability */}
           <MetricsCard title="Viewability (VA%)" value={`${viewability.toFixed(1)}%`} />
         </div>
 
-        {/* Structure Table */}
         <div className="mb-6">
           <StructureTable data={structure} />
         </div>
 
-        {/* Charts Section */}
         <div className="grid grid-cols-2 gap-6 mt-8">
           <DailyDeliveryChart
             data={chartData}
@@ -318,7 +381,7 @@ export default function Home() {
           />
           <GeographicMap
             data={geoData}
-            title="Distribuição Geográfica (Top 5 Estados)"
+            title="Distribuição Geográfica (Top Regiões)"
           />
         </div>
       </div>
