@@ -7,12 +7,14 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import AdServer from "./pages/AdServer";
 import CampaignList from "./pages/CampaignList";
 import Home from "./pages/Home";
+import VehicleDashboard from "./pages/VehicleDashboard";
 
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={CampaignList} />
+      <Route path={"/dashboard/:id/:vehicle"} component={VehicleDashboard} />
       <Route path={"/dashboard/:id"} component={Home} />
       <Route path={"/adserver"} component={AdServer} />
       <Route path={"/404"} component={NotFound} />
