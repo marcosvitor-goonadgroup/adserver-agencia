@@ -26,7 +26,11 @@ function StructureRow({
 
   // linha pai mostra valores agregados dos filhos
   const row = hasChildren ? aggregateItem(item) : item;
-  const pacing = Math.min(Math.round((row.delivered / row.contracted) * 100), 100);
+
+  // Entregue e pacing dependem do tipo de compra (só relevante no nível site)
+  const pt = item.purchaseType?.toUpperCase();
+  const deliveredForType = pt === "CPC" ? row.clicks : pt === "CPV" ? row.views : row.impressions;
+  const pacing = row.contracted > 0 ? Math.min(Math.round((deliveredForType / row.contracted) * 100), 100) : 0;
 
   return (
     <>
@@ -50,7 +54,7 @@ function StructureRow({
           </div>
         </td>
         <td className="px-4 py-3 text-black text-sm">{formatNumber(row.contracted)}</td>
-        <td className="px-4 py-3 text-black text-sm">{formatNumber(row.delivered)}</td>
+        <td className="px-4 py-3 text-black text-sm">{formatNumber(deliveredForType)}</td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-2">
             <div className="w-16 bg-gray-200 rounded-full h-1">

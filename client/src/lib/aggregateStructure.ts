@@ -1,5 +1,6 @@
 export interface StructureItem {
   name: string;
+  purchaseType?: string; // CPM | CPC | CPV (nível site/veículo)
   contracted: number;
   delivered: number;
   pacing: number;
@@ -11,6 +12,34 @@ export interface StructureItem {
   views: number;
   vtr: number;
   children?: StructureItem[];
+}
+
+export interface PurchaseGroup {
+  type: string;       // "CPM" | "CPC" | "CPV"
+  contracted: number;
+  delivered: number;
+  pacing: number;
+}
+
+/** Agrupa veículos por tipo de compra e calcula pacing por grupo */
+export function computePurchaseGroups(structure: StructureItem[]): PurchaseGroup[] {
+  const map: Record<string, { contracted: number; delivered: number }> = {};
+  for (const site of structure) {
+    const type = site.purchaseType || "CPM";
+    const delivered =
+      type === "CPC" ? site.clicks :
+      type === "CPV" ? site.views :
+      site.impressions; // CPM
+    if (!map[type]) map[type] = { contracted: 0, delivered: 0 };
+    map[type].contracted += site.contracted;
+    map[type].delivered  += delivered;
+  }
+  return Object.entries(map).map(([type, v]) => ({
+    type,
+    contracted: v.contracted,
+    delivered:  v.delivered,
+    pacing: v.contracted > 0 ? Math.round((v.delivered / v.contracted) * 100) : 0,
+  }));
 }
 
 /** Retorna o item com valores somados a partir dos filhos (se existirem).

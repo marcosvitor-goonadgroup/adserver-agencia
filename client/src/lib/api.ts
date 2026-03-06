@@ -433,6 +433,7 @@ export interface SheetCampaignRow {
   agency: string;
   campaign: string;
   vehicle: string;
+  purchaseType: string;
   contracted: number;
   dateBegin: string; // DD/MM/YYYY
   dateEnd: string;   // DD/MM/YYYY

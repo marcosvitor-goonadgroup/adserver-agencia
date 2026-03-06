@@ -7,16 +7,16 @@ interface MetricsCardProps {
 
 export function MetricsCard({ title, value, badge, badgeValue }: MetricsCardProps) {
   return (
-    <div className="bg-white rounded-[34px] p-6 flex flex-col justify-between h-[106px]">
-      <h3 className="text-black text-[15px] font-medium">{title}</h3>
-      <div className="flex items-end justify-between">
-        <div className="text-black text-3xl font-medium">{value}</div>
+    <div className="bg-white rounded-[24px] p-4 flex flex-col justify-between min-h-[90px]">
+      <h3 className="text-black text-xs font-medium leading-tight">{title}</h3>
+      <div className="flex items-end justify-between gap-1">
+        <div className="text-black text-xl font-medium leading-none">{value}</div>
         {badge && badgeValue && (
-          <div className="flex flex-col items-end">
-            <span className="text-black/40 text-[10px] font-medium uppercase tracking-wide leading-none mb-0.5">
+          <div className="flex flex-col items-end shrink-0">
+            <span className="text-black/40 text-[9px] font-medium uppercase tracking-wide leading-none mb-0.5">
               {badge}
             </span>
-            <span className="text-black/70 text-sm font-semibold">{badgeValue}</span>
+            <span className="text-black/70 text-xs font-semibold">{badgeValue}</span>
           </div>
         )}
       </div>

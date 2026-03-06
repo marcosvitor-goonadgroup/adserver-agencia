@@ -5,7 +5,7 @@ import { MetricsCard } from "@/components/MetricsCard";
 import { StructureTable } from "@/components/StructureTable";
 import { DailyDeliveryChart } from "@/components/DailyDeliveryChart";
 import { GeographicMap } from "@/components/GeographicMap";
-import { computeTotals, type StructureItem } from "@/lib/aggregateStructure";
+import { computeTotals, computePurchaseGroups, type StructureItem, type PurchaseGroup } from "@/lib/aggregateStructure";
 import {
   fetchCampaigns,
   fetchCampaignReport,
@@ -46,6 +46,7 @@ interface DashboardData {
   structure: StructureItem[];
   chartData: ChartPoint[];
   geoData: GeoPoint[];
+  purchaseGroups: PurchaseGroup[];
 }
 
 function formatDate(dateStr: string | null): string {
@@ -153,6 +154,16 @@ function buildContractedIndex(sheetRows: SheetCampaignRow[]): Record<string, num
   return idx;
 }
 
+// Tipo de compra por veículo
+function buildPurchaseTypeIndex(sheetRows: SheetCampaignRow[]): Record<string, string> {
+  const idx: Record<string, string> = {};
+  for (const row of sheetRows) {
+    const k = (row.vehicle || "").toLowerCase().trim();
+    if (k && row.purchaseType) idx[k] = row.purchaseType.toUpperCase();
+  }
+  return idx;
+}
+
 function buildDashboardData(
   campaign: Campaign,
   report: CampaignReport,
@@ -172,6 +183,7 @@ function buildDashboardData(
   const period = startAt && finishAt ? `${startAt} - ${finishAt}` : "—";
 
   const contractedIdx = buildContractedIndex(sheetRows);
+  const purchaseTypeIdx = buildPurchaseTypeIndex(sheetRows);
   const viewIdx = buildViewabilityIndex(viewRows);
 
   // Total contratado da planilha para esta campanha
@@ -263,6 +275,7 @@ function buildDashboardData(
 
     return {
       name: site.site_name,
+      purchaseType: purchaseTypeIdx[siteLower] || "CPM",
       contracted,
       delivered: imp,
       pacing: contracted > 0 ? Math.round((imp / contracted) * 100) : 0,
@@ -307,6 +320,7 @@ function buildDashboardData(
     structure,
     chartData,
     geoData,
+    purchaseGroups: computePurchaseGroups(structure),
   };
 }
 
@@ -388,12 +402,12 @@ export default function Home() {
     );
   }
 
-  const { campaign, structure, chartData, geoData } = data;
-  const { contracted, delivered, impressions, views, clicks, pacing, viewability, ctr, vtr } =
+  const { campaign, structure, chartData, geoData, purchaseGroups } = data;
+  const { delivered, impressions, viewables, views, clicks, viewability, ctr, vtr } =
     computeTotals(structure);
 
   return (
-    <div className="min-h-screen bg-[#f1f1f1] p-6">
+    <div className="min-h-screen bg-[#f1f1f1] p-3 sm:p-6">
       <div className="max-w-[1440px] mx-auto">
         <button
           onClick={() => navigate("/")}
@@ -404,28 +418,67 @@ export default function Home() {
 
         <Header campaign={campaign} structure={structure} />
 
-        <div className="grid grid-cols-6 gap-6 mb-6">
-          {/* Contratado com pacing */}
-          <div className="bg-white rounded-[34px] p-6 h-[106px] flex flex-col justify-between">
-            <h3 className="text-black text-[15px] font-medium">Contratado</h3>
-            <div>
-              <div className="text-black text-3xl font-medium mb-2">
-                {contracted.toLocaleString("pt-BR")}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-black/10 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-[#f4af00] h-full rounded-full"
-                    style={{ width: `${Math.min(pacing, 100)}%` }}
-                  />
+        {/* Linha 1: Contratado + Entregue por tipo de compra */}
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          {/* Contratado — uma barra por tipo de compra */}
+          <div className="bg-white rounded-[24px] p-4">
+            <h3 className="text-black text-xs font-medium mb-3">Contratado</h3>
+            <div className="flex flex-col gap-2">
+              {purchaseGroups.map((g) => (
+                <div key={g.type}>
+                  <div className="flex items-baseline gap-2 mb-0.5">
+                    <span className="bg-[#153ece] text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-md leading-none shrink-0">
+                      {g.type}
+                    </span>
+                    <span className="text-black text-xl font-medium leading-none">
+                      {g.contracted.toLocaleString("pt-BR")}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex-1 bg-black/10 rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className="bg-[#f4af00] h-full rounded-full"
+                        style={{ width: `${Math.min(g.pacing, 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-[#f4af00] text-[10px] font-semibold shrink-0">{g.pacing}%</span>
+                  </div>
                 </div>
-                <span className="text-[#f4af00] text-xs font-semibold shrink-0">{pacing}%</span>
-              </div>
+              ))}
             </div>
           </div>
 
-          <MetricsCard title="Entregue" value={delivered.toLocaleString("pt-BR")} />
+          {/* Entregue — uma linha por tipo de compra */}
+          <div className="bg-white rounded-[24px] p-4">
+            <h3 className="text-black text-xs font-medium mb-3">Entregue</h3>
+            <div className="flex flex-col gap-2">
+              {purchaseGroups.map((g) => (
+                <div key={g.type} className="flex items-baseline gap-2">
+                  <span className="bg-[#153ece] text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-md leading-none shrink-0">
+                    {g.type}
+                  </span>
+                  <span className="text-black text-xl font-medium leading-none">
+                    {g.delivered.toLocaleString("pt-BR")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Linha 2: métricas individuais */}
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
           <MetricsCard title="Impressões" value={impressions.toLocaleString("pt-BR")} />
+          <div className="bg-white rounded-[24px] p-4 flex flex-col justify-between min-h-[90px]">
+            <h3 className="text-black text-xs font-medium leading-tight">Impressões Visíveis</h3>
+            <div className="flex items-end justify-between gap-1">
+              <div className="text-black text-xl font-medium leading-none">{viewables.toLocaleString("pt-BR")}</div>
+              <div className="flex flex-col items-end shrink-0">
+                <span className="text-black/40 text-[9px] font-medium uppercase tracking-wide leading-none mb-0.5">VA%</span>
+                <span className="text-black/70 text-xs font-semibold">{viewability.toFixed(1)}%</span>
+              </div>
+            </div>
+          </div>
           <MetricsCard
             title="Visualizações"
             value={views.toLocaleString("pt-BR")}
@@ -438,14 +491,13 @@ export default function Home() {
             badge="CTR"
             badgeValue={`${ctr.toFixed(2)}%`}
           />
-          <MetricsCard title="Viewability (VA%)" value={`${viewability.toFixed(1)}%`} />
         </div>
 
         <div className="mb-6">
           <StructureTable data={structure} />
         </div>
 
-        <div className="grid grid-cols-2 gap-6 mt-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
           <DailyDeliveryChart
             data={chartData}
             title="Entrega Diária vs. Visualizações"

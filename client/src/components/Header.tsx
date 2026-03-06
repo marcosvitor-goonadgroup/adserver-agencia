@@ -23,40 +23,44 @@ export function Header({ campaign, structure }: HeaderProps) {
 
   return (
     <>
-      <div className="w-full bg-[#153ece] rounded-[34px] px-10 py-7 mb-6">
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex-1">
-            <h1 className="text-white text-[32px] font-medium mb-4">
-              {campaign.title}
-            </h1>
-            <div className="flex gap-8 text-white text-xl font-normal">
-              <span>Período: {campaign.period}</span>
-              <span className="border-l border-white/30 pl-8">
-                Agência: {campaign.agency}
-              </span>
-              <span className="border-l border-white/30 pl-8">
-                Cliente: {campaign.client}
-              </span>
-            </div>
-          </div>
+      <div className="w-full bg-[#153ece] rounded-[34px] px-6 py-6 mb-6">
+        {/* Título + botão */}
+        <div className="flex justify-between items-start gap-3 mb-4">
+          <h1 className="text-white font-medium leading-tight" style={{ fontSize: "clamp(18px, 4vw, 32px)" }}>
+            {campaign.title}
+          </h1>
           <Button
             variant="outline"
-            className="bg-white text-black hover:bg-gray-100 rounded-2xl px-6 py-2 flex items-center gap-2"
+            className="bg-white text-black hover:bg-gray-100 rounded-2xl px-3 py-2 flex items-center gap-1.5 shrink-0 text-sm"
             onClick={() => setModalOpen(true)}
           >
             <Download className="w-4 h-4" />
-            Baixar relatório
+            <span>Baixar</span>
           </Button>
         </div>
 
-        <div className="flex items-center gap-4 bg-white/25 rounded-2xl px-6 py-4 w-fit">
-          <div className="flex items-center gap-3">
-            <div className="text-white text-[32px] font-normal">
-              {campaign.auditStatus.percentage}%
-            </div>
-            <div className="text-white text-xl font-normal">
-              Auditado por {campaign.auditStatus.verifier}
-            </div>
+        {/* Metadados em grid 2 colunas no mobile, linha no desktop */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-4 md:flex md:gap-8 text-white text-sm md:text-xl font-normal">
+          <div>
+            <div className="text-white/60 text-xs uppercase tracking-wide">Período</div>
+            <div>{campaign.period || "—"}</div>
+          </div>
+          <div>
+            <div className="text-white/60 text-xs uppercase tracking-wide">Agência</div>
+            <div>{campaign.agency}</div>
+          </div>
+          <div>
+            <div className="text-white/60 text-xs uppercase tracking-wide">Cliente</div>
+            <div>{campaign.client}</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 bg-white/25 rounded-2xl px-5 py-3 w-fit">
+          <div className="text-white font-normal" style={{ fontSize: "clamp(20px, 5vw, 32px)" }}>
+            {campaign.auditStatus.percentage}%
+          </div>
+          <div className="text-white text-sm md:text-xl font-normal">
+            Auditado por {campaign.auditStatus.verifier}
           </div>
         </div>
       </div>
