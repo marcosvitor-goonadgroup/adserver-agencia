@@ -6,6 +6,7 @@ import { StructureTable } from "@/components/StructureTable";
 import { DailyDeliveryChart } from "@/components/DailyDeliveryChart";
 import { GeographicMap } from "@/components/GeographicMap";
 import { computeTotals, computePurchaseGroups, type StructureItem, type PurchaseGroup } from "@/lib/aggregateStructure";
+import { type ChartPoint } from "@/components/DailyDeliveryChart";
 import {
   fetchCampaigns,
   fetchCampaignReport,
@@ -20,12 +21,6 @@ import {
   type VastRow,
   type SheetCampaignRow,
 } from "@/lib/api";
-
-interface ChartPoint {
-  date: string;
-  delivery: number;
-  viewability: number;
-}
 
 interface GeoPoint {
   state: string;
@@ -245,22 +240,37 @@ function buildDashboardData(
     };
   });
 
-  const dateAcc: Record<string, { delivery: number; views: number }> = {};
+  const dateAcc: Record<string, { impressions: number; views: number; clicks: number; viewables: number }> = {};
   for (const site of sitesToUse) {
     for (const day of site.days) {
       if (!day.stats) continue;
-      if (!dateAcc[day.date]) dateAcc[day.date] = { delivery: 0, views: 0 };
-      dateAcc[day.date].delivery += day.stats.impressions;
-      dateAcc[day.date].views   += day.stats.views;
+      if (!dateAcc[day.date]) dateAcc[day.date] = { impressions: 0, views: 0, clicks: 0, viewables: 0 };
+      dateAcc[day.date].impressions += day.stats.impressions;
+      dateAcc[day.date].views       += day.stats.views;
+      dateAcc[day.date].clicks      += day.stats.clicks;
     }
+  }
+  for (const row of viewRows) {
+    const d = row.Dia?.slice(0, 10);
+    if (!d) continue;
+    if (!dateAcc[d]) dateAcc[d] = { impressions: 0, views: 0, clicks: 0, viewables: 0 };
+    dateAcc[d].viewables += Number(row.Viewable) || 0;
   }
   const chartData: ChartPoint[] = Object.entries(dateAcc)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, v]) => ({
-      date: date.slice(5).replace("-", "/"),
-      delivery:    v.delivery,
-      viewability: v.views,
-    }));
+    .map(([date, v]) => {
+      const imp = v.impressions;
+      return {
+        date:        date.slice(5).replace("-", "/"),
+        impressions: imp,
+        views:       v.views,
+        clicks:      v.clicks,
+        viewables:   v.viewables,
+        ctr:  imp > 0 ? parseFloat(((v.clicks   / imp) * 100).toFixed(3)) : 0,
+        vtr:  imp > 0 ? parseFloat(((v.views    / imp) * 100).toFixed(3)) : 0,
+        va:   imp > 0 ? parseFloat(((v.viewables / imp) * 100).toFixed(3)) : 0,
+      };
+    });
 
   const vehicleName = filteredSites[0]?.site_name || vehicleSlugParam;
   const title = isFiltered
@@ -451,7 +461,7 @@ export default function VehicleDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-          <DailyDeliveryChart data={chartData} title="Entrega Diária vs. Visualizações" />
+          <DailyDeliveryChart data={chartData} title="Métricas Diárias" />
           <GeographicMap data={geoData} title="Distribuição Geográfica (Top Regiões)" />
         </div>
       </div>
