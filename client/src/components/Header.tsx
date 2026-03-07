@@ -23,7 +23,14 @@ export function Header({ campaign, structure }: HeaderProps) {
 
   return (
     <>
-      <div className="w-full bg-[#153ece] rounded-[34px] px-6 py-6 mb-6">
+      <div className="w-full bg-[#153ece] rounded-[34px] px-6 py-6 mb-6 relative overflow-hidden">
+        {/* Logo watermark canto inferior direito */}
+        <img
+          src="/1-426.svg"
+          alt=""
+          aria-hidden="true"
+          className="absolute bottom-4 right-6 h-12 opacity-60 pointer-events-none select-none brightness-0 invert"
+        />
         {/* Título + botão */}
         <div className="flex justify-between items-start gap-3 mb-4">
           <h1 className="text-white font-medium leading-tight" style={{ fontSize: "clamp(18px, 4vw, 32px)" }}>

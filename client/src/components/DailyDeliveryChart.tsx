@@ -34,7 +34,7 @@ const PRIMARY_OPTIONS: { value: PrimaryMetric; label: string }[] = [
   { value: "impressions", label: "Impressões" },
   { value: "views",       label: "Visualizações" },
   { value: "clicks",      label: "Cliques" },
-  { value: "viewables",   label: "Imp. Visíveis" },
+  { value: "viewables",   label: "Imp. Viáveis" },
 ];
 
 const SECONDARY_OPTIONS: { value: SecondaryMetric; label: string; isRate: boolean }[] = [
@@ -45,7 +45,7 @@ const SECONDARY_OPTIONS: { value: SecondaryMetric; label: string; isRate: boolea
   { value: "impressions", label: "Impressões",     isRate: false },
   { value: "views",       label: "Visualizações",  isRate: false },
   { value: "clicks",      label: "Cliques",        isRate: false },
-  { value: "viewables",   label: "Imp. Visíveis",  isRate: false },
+  { value: "viewables",   label: "Imp. Viáveis",  isRate: false },
 ];
 
 function formatPrimary(val: number): string {

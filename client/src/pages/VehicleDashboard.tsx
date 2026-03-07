@@ -440,18 +440,13 @@ export default function VehicleDashboard() {
         </div>
 
         {/* Linha 2: métricas individuais */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 xl:grid-cols-5 gap-3 mb-6">
           <MetricsCard title="Impressões" value={impressions.toLocaleString("pt-BR")} />
-          <div className="bg-white rounded-[24px] p-4 flex flex-col justify-between min-h-[90px]">
-            <h3 className="text-black text-xs font-medium leading-tight">Impressões Visíveis</h3>
-            <div className="flex items-end justify-between gap-1">
-              <div className="text-black text-xl font-medium leading-none">{viewables.toLocaleString("pt-BR")}</div>
-              <div className="flex flex-col items-end shrink-0">
-                <span className="text-black/40 text-[9px] font-medium uppercase tracking-wide leading-none mb-0.5">VA%</span>
-                <span className="text-black/70 text-xs font-semibold">{viewability.toFixed(1)}%</span>
-              </div>
-            </div>
-          </div>
+          <MetricsCard title="Impressões Viáveis" value={viewables.toLocaleString("pt-BR")} />
+          <MetricsCard
+            title="Viewability"
+            value={`${viewability.toFixed(1)}%`}
+          />
           <MetricsCard title="Visualizações" value={views.toLocaleString("pt-BR")} badge="VTR" badgeValue={`${vtr.toFixed(2)}%`} />
           <MetricsCard title="Cliques" value={clicks.toLocaleString("pt-BR")} badge="CTR" badgeValue={`${ctr.toFixed(2)}%`} />
         </div>

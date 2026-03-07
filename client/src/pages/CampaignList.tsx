@@ -84,7 +84,7 @@ export default function CampaignList() {
       <div className="max-w-[1200px] mx-auto">
         {/* Header */}
         <div className="w-full bg-[#153ece] rounded-[34px] px-8 py-6 mb-6 flex items-center gap-4">
-          <img src="/1-426.svg" alt="Logo" className="h-10" />
+          <img src="/1-426.svg" alt="Logo" className="h-10 brightness-0 invert" />
           <div>
             <h1 className="text-white text-2xl font-medium leading-tight">AD Desk</h1>
             <p className="text-white/70 text-sm">Painel de Campanhas</p>
