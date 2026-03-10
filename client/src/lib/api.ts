@@ -317,6 +317,14 @@ export async function fetchCampaignAds(
   return res.json();
 }
 
+export async function fetchCampaignSites(
+  campaignId: number
+): Promise<{ site_id: number; site_name: string }[]> {
+  const res = await fetch(`${API_BASE}/campaigns/${campaignId}/sites`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export async function updateAd(
   id: number,
   body: { name?: string; url?: string; is_active?: boolean }

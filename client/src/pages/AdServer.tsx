@@ -4,6 +4,7 @@ import {
   createCampaign, createAd, assignAdToZones,
   updateCampaign, deleteCampaign, updateAd, deleteAd,
   updateSite, deleteSite, updateZone, deleteZone,
+  fetchCampaignSites,
   type Site, type Dict, type AdDetails, type ZoneTagType, type AssignedAd,
 } from "@/lib/api";
 
@@ -433,13 +434,22 @@ function Step1Campaigns({
 // ── Step 2: Sites ──────────────────────────────────────────────────────────────
 
 function Step2Sites({
-  sites, dict, onRefresh, onNext,
+  sites, dict, selectedCampaignId, onRefresh, onNext,
 }: {
   sites: Site[];
   dict: Dict;
+  selectedCampaignId: number | null;
   onRefresh: () => void;
   onNext: (siteId: number) => void;
 }) {
+  // Sites da campanha (vindos do endpoint /campaigns/:id/sites)
+  const [campaignSiteIds, setCampaignSiteIds] = useState<Set<number>>(new Set());
+  const [loadingSites, setLoadingSites] = useState(false);
+
+  // Painel ativo: "campaign" | "add" | "new"
+  const [panel, setPanel] = useState<"campaign" | "add" | "new">("campaign");
+
+  // Novo site
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [catId, setCatId] = useState("");
@@ -458,6 +468,19 @@ function Step2Sites({
   const [deleteTarget, setDeleteTarget] = useState<Site | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Carrega sites da campanha ao montar ou trocar de campanha
+  useEffect(() => {
+    if (!selectedCampaignId) { setCampaignSiteIds(new Set()); return; }
+    setLoadingSites(true);
+    fetchCampaignSites(selectedCampaignId)
+      .then((rows) => setCampaignSiteIds(new Set(rows.map((r) => r.site_id))))
+      .catch(() => setCampaignSiteIds(new Set()))
+      .finally(() => setLoadingSites(false));
+  }, [selectedCampaignId]);
+
+  const campaignSites = sites.filter((s) => campaignSiteIds.has(s.id));
+  const otherSites    = sites.filter((s) => !campaignSiteIds.has(s.id));
+
   function openEdit(s: Site) {
     setEditTarget(s);
     setEditName(s.name);
@@ -470,10 +493,11 @@ function Step2Sites({
     if (!name || !url) return setFeedback({ type: "err", msg: "Nome e URL são obrigatórios." });
     setLoading(true); setFeedback(null);
     try {
-      await createSite({ name, url, ...(catId ? { idcategory: Number(catId) } : {}) });
+      const created = await createSite({ name, url, ...(catId ? { idcategory: Number(catId) } : {}) });
       setName(""); setUrl(""); setCatId("");
-      setFeedback({ type: "ok", msg: "Site criado com sucesso!" });
+      setFeedback({ type: "ok", msg: `Site "${created.name}" criado! Selecione-o para continuar.` });
       onRefresh();
+      setPanel("campaign");
     } catch (e: unknown) {
       setFeedback({ type: "err", msg: e instanceof Error ? e.message : "Erro ao criar site." });
     } finally {
@@ -514,50 +538,134 @@ function Step2Sites({
     }
   }
 
+  function SiteRow({ s, highlight }: { s: Site; highlight?: boolean }) {
+    return (
+      <div
+        className={`flex items-center justify-between rounded-xl px-3 py-2 border transition-colors ${
+          highlight
+            ? "border-[#153ece]/30 bg-blue-50/40"
+            : "border-gray-100 hover:border-[#153ece]/30"
+        }`}
+      >
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-black truncate">{s.name}</p>
+          <p className="text-xs text-gray-400 truncate">{s.url} · {s.zones.length} zona(s)</p>
+        </div>
+        <div className="flex items-center gap-1 ml-2 shrink-0">
+          <IconBtn onClick={() => openEdit(s)} title="Editar site"><PencilIcon /></IconBtn>
+          <IconBtn onClick={() => setDeleteTarget(s)} title="Excluir site" danger><TrashIcon /></IconBtn>
+          <button
+            onClick={() => onNext(s.id)}
+            className="text-[#153ece] text-xs font-medium hover:underline ml-1"
+          >
+            Selecionar →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="grid grid-cols-2 gap-6">
-        <div className="bg-white rounded-[24px] p-6 flex flex-col gap-4">
-          <h3 className="text-base font-semibold text-black">Novo site</h3>
-          <Field label="Nome do site">
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Meu Site" />
-          </Field>
-          <Field label="URL">
-            <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://exemplo.com" />
-          </Field>
-          <Field label="Categoria">
-            <Select options={dictOptions(dict.categories)} value={catId} onChange={(e) => setCatId(e.target.value)} />
-          </Field>
-          {feedback && <Alert type={feedback.type} msg={feedback.msg} />}
-          <Btn loading={loading} onClick={handleCreate}>Criar site</Btn>
+
+        {/* Coluna esquerda: sites da campanha */}
+        <div className="bg-white rounded-[24px] p-6 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold text-black">Sites desta campanha</h3>
+            {!selectedCampaignId && (
+              <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">
+                Nenhuma campanha selecionada
+              </span>
+            )}
+          </div>
+
+          {loadingSites ? (
+            <p className="text-gray-400 text-sm">Carregando…</p>
+          ) : campaignSites.length === 0 ? (
+            <p className="text-gray-400 text-sm">
+              {selectedCampaignId
+                ? "Nenhum site com entrega registrada para esta campanha."
+                : "Selecione uma campanha no passo 1 para ver os sites vinculados."}
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2 overflow-y-auto max-h-[320px]">
+              {campaignSites.map((s) => <SiteRow key={s.id} s={s} highlight />)}
+            </div>
+          )}
+
+          {/* Botões de ação */}
+          <div className="flex gap-2 mt-1 flex-wrap">
+            <button
+              onClick={() => setPanel(panel === "add" ? "campaign" : "add")}
+              className={`text-xs px-3 py-1.5 rounded-xl border transition-colors ${
+                panel === "add"
+                  ? "bg-[#153ece] text-white border-[#153ece]"
+                  : "text-[#153ece] border-[#153ece]/40 hover:bg-blue-50"
+              }`}
+            >
+              + Adicionar site existente
+            </button>
+            <button
+              onClick={() => setPanel(panel === "new" ? "campaign" : "new")}
+              className={`text-xs px-3 py-1.5 rounded-xl border transition-colors ${
+                panel === "new"
+                  ? "bg-[#153ece] text-white border-[#153ece]"
+                  : "text-gray-500 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              + Cadastrar novo site
+            </button>
+          </div>
         </div>
 
+        {/* Coluna direita: painel variável */}
         <div className="bg-white rounded-[24px] p-6 flex flex-col gap-3">
-          <h3 className="text-base font-semibold text-black">Sites existentes</h3>
-          {sites.length === 0 && <p className="text-gray-400 text-sm">Nenhum site encontrado.</p>}
-          <div className="flex flex-col gap-2 overflow-y-auto max-h-[340px]">
-            {sites.map((s) => (
-              <div
-                key={s.id}
-                className="flex items-center justify-between border border-gray-100 rounded-xl px-3 py-2 hover:border-[#153ece]/30"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-black truncate">{s.name}</p>
-                  <p className="text-xs text-gray-400 truncate">{s.url} · {s.zones.length} zona(s)</p>
+
+          {panel === "campaign" && (
+            <>
+              <h3 className="text-base font-semibold text-black">Todos os sites cadastrados</h3>
+              {sites.length === 0 ? (
+                <p className="text-gray-400 text-sm">Nenhum site cadastrado ainda.</p>
+              ) : (
+                <div className="flex flex-col gap-2 overflow-y-auto max-h-[340px]">
+                  {sites.map((s) => <SiteRow key={s.id} s={s} highlight={campaignSiteIds.has(s.id)} />)}
                 </div>
-                <div className="flex items-center gap-1 ml-2 shrink-0">
-                  <IconBtn onClick={() => openEdit(s)} title="Editar site"><PencilIcon /></IconBtn>
-                  <IconBtn onClick={() => setDeleteTarget(s)} title="Excluir site" danger><TrashIcon /></IconBtn>
-                  <button
-                    onClick={() => onNext(s.id)}
-                    className="text-[#153ece] text-xs font-medium hover:underline ml-1"
-                  >
-                    Selecionar →
-                  </button>
+              )}
+            </>
+          )}
+
+          {panel === "add" && (
+            <>
+              <h3 className="text-base font-semibold text-black">Adicionar site existente</h3>
+              <p className="text-xs text-gray-500">Sites ainda não vinculados a esta campanha. Selecione para ir às zonas.</p>
+              {otherSites.length === 0 ? (
+                <p className="text-gray-400 text-sm">Todos os sites já estão nesta campanha.</p>
+              ) : (
+                <div className="flex flex-col gap-2 overflow-y-auto max-h-[300px]">
+                  {otherSites.map((s) => <SiteRow key={s.id} s={s} />)}
                 </div>
-              </div>
-            ))}
-          </div>
+              )}
+            </>
+          )}
+
+          {panel === "new" && (
+            <>
+              <h3 className="text-base font-semibold text-black">Cadastrar novo site</h3>
+              <Field label="Nome do site">
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Meu Site" />
+              </Field>
+              <Field label="URL">
+                <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://exemplo.com" />
+              </Field>
+              <Field label="Categoria">
+                <Select options={dictOptions(dict.categories)} value={catId} onChange={(e) => setCatId(e.target.value)} />
+              </Field>
+              {feedback && <Alert type={feedback.type} msg={feedback.msg} />}
+              <Btn loading={loading} onClick={handleCreate}>Criar site</Btn>
+            </>
+          )}
+
         </div>
       </div>
 
@@ -654,9 +762,13 @@ function Step3Zones({
     const t = type ?? tagType;
     setTagLoading(true);
     setTagZoneId(zoneId);
-    // Don't clear tag — keep old content visible while loading (just fade it)
-    if (tagZoneId !== zoneId) setTag(null); // Only clear if switching zone entirely
+    if (tagZoneId !== zoneId) setTag(null);
     try {
+      const zoneDetail = await fetchZone(zoneId);
+      if (!zoneDetail.assigned_ads || zoneDetail.assigned_ads.length === 0) {
+        setTag("⚠️ Esta zona não possui criativos (anúncios) vinculados. Vincule um criativo antes de gerar a tag.");
+        return;
+      }
       const code = await fetchZoneTag(zoneId, t);
       setTag(code);
     } catch {
@@ -1307,6 +1419,7 @@ export default function AdServer() {
                 <Step2Sites
                   sites={sites}
                   dict={dict}
+                  selectedCampaignId={selectedCampaignId}
                   onRefresh={loadAll}
                   onNext={(id) => { setSelectedSiteId(id); goToStep(3); }}
                 />
