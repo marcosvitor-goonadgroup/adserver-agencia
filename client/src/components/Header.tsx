@@ -3,6 +3,7 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ReportModal } from "@/components/ReportModal";
 import { type StructureItem } from "@/lib/aggregateStructure";
+import { UserMenu } from "@/components/UserMenu";
 
 interface HeaderProps {
   campaign: {
@@ -31,19 +32,22 @@ export function Header({ campaign, structure }: HeaderProps) {
           aria-hidden="true"
           className="absolute bottom-4 right-6 h-12 opacity-60 pointer-events-none select-none brightness-0 invert"
         />
-        {/* Título + botão */}
+        {/* Título + botões */}
         <div className="flex justify-between items-start gap-3 mb-4">
           <h1 className="text-white font-medium leading-tight" style={{ fontSize: "clamp(18px, 4vw, 32px)" }}>
             {campaign.title}
           </h1>
-          <Button
-            variant="outline"
-            className="bg-white text-black hover:bg-gray-100 rounded-2xl px-3 py-2 flex items-center gap-1.5 shrink-0 text-sm"
-            onClick={() => setModalOpen(true)}
-          >
-            <Download className="w-4 h-4" />
-            <span>Baixar</span>
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              className="bg-white text-black hover:bg-gray-100 rounded-2xl px-3 py-2 flex items-center gap-1.5 text-sm"
+              onClick={() => setModalOpen(true)}
+            >
+              <Download className="w-4 h-4" />
+              <span>Baixar</span>
+            </Button>
+            <UserMenu />
+          </div>
         </div>
 
         {/* Metadados em grid 2 colunas no mobile, linha no desktop */}

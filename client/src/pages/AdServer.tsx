@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { UserMenu } from "@/components/UserMenu";
 import {
   fetchSites, fetchDict, createSite, createZone, fetchZone, fetchZoneTag,
   createCampaign, createAd, assignAdToZones,
@@ -1364,9 +1365,12 @@ export default function AdServer() {
     <div className="min-h-screen bg-[#f1f1f1] p-6">
       <div className="max-w-[1100px] mx-auto">
         {/* Header */}
-        <div className="w-full bg-[#153ece] rounded-[34px] px-10 py-7 mb-6">
-          <h1 className="text-white text-[28px] font-medium mb-1">AdServer</h1>
-          <p className="text-white/70 text-base">Gerencie sites, zonas, campanhas e anúncios</p>
+        <div className="w-full bg-[#153ece] rounded-[34px] px-10 py-7 mb-6 flex items-center gap-4">
+          <div className="flex-1">
+            <h1 className="text-white text-[28px] font-medium mb-1">AdServer</h1>
+            <p className="text-white/70 text-base">Gerencie sites, zonas, campanhas e anúncios</p>
+          </div>
+          <UserMenu />
         </div>
 
         {loading || !dict ? (

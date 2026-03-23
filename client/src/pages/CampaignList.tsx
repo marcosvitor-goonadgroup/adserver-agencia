@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { fetchSheetCampaignData, type SheetCampaignRow } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { UserMenu } from "@/components/UserMenu";
 
 interface CampaignGroup {
   agency: string;
@@ -40,6 +42,7 @@ export default function CampaignList() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [campaignIdMap, setCampaignIdMap] = useState<Record<string, number>>({});
   const [, navigate] = useLocation();
+  const { user } = useAuth();
 
   useEffect(() => {
     async function load() {
@@ -48,7 +51,13 @@ export default function CampaignList() {
           fetchSheetCampaignData(),
           fetch("https://adserver-api.vercel.app/campaigns").then((r) => r.json()).catch(() => []),
         ]);
-        setGroups(groupByCampaign(sheetRows));
+
+        const empresaNome = user?.empresa?.nome_fantasia?.toLowerCase() ?? null;
+        const filteredRows = empresaNome
+          ? sheetRows.filter((r) => r.agency.toLowerCase() === empresaNome)
+          : sheetRows;
+
+        setGroups(groupByCampaign(filteredRows));
 
         // Monta mapa nome_campanha → id do adserver
         const idMap: Record<string, number> = {};
@@ -85,10 +94,11 @@ export default function CampaignList() {
         {/* Header */}
         <div className="w-full bg-[#153ece] rounded-[34px] px-8 py-6 mb-6 flex items-center gap-4">
           <img src="/1-426.svg" alt="Logo" className="h-10 brightness-0 invert" />
-          <div>
+          <div className="flex-1">
             <h1 className="text-white text-2xl font-medium leading-tight">AD Desk</h1>
             <p className="text-white/70 text-sm">Painel de Campanhas</p>
           </div>
+          <UserMenu />
         </div>
 
         {loading && (
