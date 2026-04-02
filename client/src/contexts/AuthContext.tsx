@@ -26,6 +26,20 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const TOKEN_KEY = "addesk_token";
 const EMPRESA_KEY = "addesk_empresa_id";
+const EXPIRY_KEY = "addesk_expiry";
+const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 horas
+
+function isSessionExpired(): boolean {
+  const expiry = localStorage.getItem(EXPIRY_KEY);
+  if (!expiry) return true;
+  return Date.now() > Number(expiry);
+}
+
+function clearSession() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(EMPRESA_KEY);
+  localStorage.removeItem(EXPIRY_KEY);
+}
 
 async function fetchMe(token: string, empresaId: number): Promise<UserMe> {
   const res = await fetch("https://api-prod-goon-app.up.railway.app/me", {
@@ -40,18 +54,25 @@ async function fetchMe(token: string, empresaId: number): Promise<UserMe> {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
+  const [token, setToken] = useState<string | null>(() => {
+    if (isSessionExpired()) { clearSession(); return null; }
+    return localStorage.getItem(TOKEN_KEY);
+  });
   const [empresaId, setEmpresaId] = useState<number | null>(() => {
+    if (isSessionExpired()) return null;
     const v = localStorage.getItem(EMPRESA_KEY);
     return v ? Number(v) : null;
   });
   const [user, setUser] = useState<UserMe | null>(null);
   const [loadingUser, setLoadingUser] = useState<boolean>(
-    !!localStorage.getItem(TOKEN_KEY) && !!localStorage.getItem(EMPRESA_KEY)
+    !isSessionExpired() && !!localStorage.getItem(TOKEN_KEY) && !!localStorage.getItem(EMPRESA_KEY)
   );
 
   useEffect(() => {
-    if (!token || !empresaId) {
+    if (!token || !empresaId || isSessionExpired()) {
+      clearSession();
+      setToken(null);
+      setEmpresaId(null);
       setUser(null);
       setLoadingUser(false);
       return;
@@ -60,8 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchMe(token, empresaId)
       .then(setUser)
       .catch(() => {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(EMPRESA_KEY);
+        clearSession();
         setToken(null);
         setEmpresaId(null);
         setUser(null);
@@ -72,13 +92,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function login(t: string, eId: number) {
     localStorage.setItem(TOKEN_KEY, t);
     localStorage.setItem(EMPRESA_KEY, String(eId));
+    localStorage.setItem(EXPIRY_KEY, String(Date.now() + SESSION_TTL_MS));
     setEmpresaId(eId);
     setToken(t);
   }
 
   function logout() {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(EMPRESA_KEY);
+    clearSession();
     setToken(null);
     setEmpresaId(null);
     setUser(null);

@@ -53,9 +53,10 @@ export default function CampaignList() {
         ]);
 
         const empresaNome = user?.empresa?.nome_fantasia?.toLowerCase() ?? null;
+        // Sem empresa identificada → nenhuma campanha exibida (evita vazamento de dados de outras empresas)
         const filteredRows = empresaNome
           ? sheetRows.filter((r) => r.agency.toLowerCase() === empresaNome)
-          : sheetRows;
+          : [];
 
         setGroups(groupByCampaign(filteredRows));
 

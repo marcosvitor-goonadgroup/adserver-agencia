@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function Login() {
@@ -114,6 +114,13 @@ export default function Login() {
             </button>
           </form>
         </div>
+
+        <p className="text-center text-xs text-black/40 mt-5">
+          Ao entrar, você concorda com nossa{" "}
+          <Link href="/privacy" className="text-[#153ece] underline hover:text-[#1233b0]">
+            Política de Privacidade
+          </Link>
+        </p>
       </div>
     </div>
   );

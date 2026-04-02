@@ -10,6 +10,7 @@ import CampaignList from "./pages/CampaignList";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import VehicleDashboard from "./pages/VehicleDashboard";
 
 function PrivateRoute({ component: Component }: { component: React.ComponentType }) {
@@ -46,6 +47,7 @@ function Router() {
       <Route path={"/profile"}>
         <PrivateRoute component={Profile} />
       </Route>
+      <Route path={"/privacy"} component={PrivacyPolicy} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
