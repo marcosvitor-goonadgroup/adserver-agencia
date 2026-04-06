@@ -257,6 +257,9 @@ export async function createAd(
       const msgs = Object.values(detailErrors).flat().join(" ");
       throw new Error(msgs);
     }
+    // Scanner rejection — use `reason` field if present
+    const reason = (err as { reason?: string }).reason;
+    if (reason) throw new Error(reason);
     throw new Error((err as { message?: string }).message ?? `Error ${res.status}`);
   }
   return res.json();
