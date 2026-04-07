@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 const COMPANY = "GO ON TECNOLOGIA E PARTICIPAÇÕES LTDA";
 const CNPJ = "21.293.569/0001-62";
 const EMAIL_DPO = "privacidade@goonadgroup.com.br";
-const UPDATED_AT = "02/04/2026";
+const UPDATED_AT = "07/04/2026";
 
 export default function PrivacyPolicy() {
   const [, navigate] = useLocation();
@@ -134,9 +134,39 @@ export default function PrivacyPolicy() {
               removidos no logout. Dados de campanhas e perfil de usuário são retidos nos sistemas de origem
               (API da Go On) conforme a política de retenção desses sistemas.
             </p>
+            <p className="mt-2">
+              Dados agregados de campanhas (impressões, cliques, viewability) armazenados no Google BigQuery
+              são retidos por <strong>até 24 meses</strong> para fins de relatórios históricos, após o que são
+              excluídos ou anonimizados permanentemente.
+            </p>
           </Section>
 
-          <Section title="9. Cookies e armazenamento local">
+          <Section title="9. Transferência internacional de dados">
+            <p>
+              Alguns dos nossos parceiros de tecnologia estão localizados fora do Brasil e da União Europeia.
+              As transferências de dados para esses parceiros são realizadas com as seguintes salvaguardas:
+            </p>
+            <ul className="list-disc pl-5 mt-2 flex flex-col gap-1">
+              <li>
+                <strong>Google BigQuery / Google Sheets</strong> (EUA) — Google LLC é certificada sob as
+                Standard Contractual Clauses (SCCs) da UE e segue o EU-U.S. Data Privacy Framework.
+              </li>
+              <li>
+                <strong>Railway</strong> (EUA) — infraestrutura de autenticação sujeita aos termos de
+                processamento de dados do Railway, com criptografia em trânsito e em repouso.
+              </li>
+              <li>
+                <strong>Vercel</strong> (EUA) — hospedagem da API sujeita ao DPA (Data Processing Agreement)
+                da Vercel, compatível com GDPR.
+              </li>
+            </ul>
+            <p className="mt-2">
+              Nenhuma transferência envolve dados pessoais de usuários finais de campanhas — apenas dados
+              agregados e anonimizados de performance publicitária.
+            </p>
+          </Section>
+
+          <Section title="10. Cookies e armazenamento local">
             <p>
               Esta plataforma não utiliza cookies de rastreamento ou publicidade. O único dado armazenado
               localmente é a preferência de tema visual (<code className="bg-gray-100 px-1 rounded">claro/escuro</code>),
@@ -144,14 +174,144 @@ export default function PrivacyPolicy() {
             </p>
           </Section>
 
-          <Section title="10. Alterações nesta política">
+          <Section title="11. Alterações nesta política">
             <p>
               Esta política pode ser atualizada periodicamente. A data de última atualização está sempre
               indicada no topo desta página. Alterações significativas serão comunicadas aos usuários.
             </p>
           </Section>
 
-          <Section title="11. Contato e Encarregado (DPO)">
+          {/* ── GDPR Section (Articles 13 & 14) ── */}
+          <div className="border-t-2 border-[#153ece]/20 pt-6">
+            <p className="text-xs font-semibold text-[#153ece] uppercase tracking-widest mb-4">
+              Informações adicionais — Regulamento Geral de Proteção de Dados (GDPR)
+            </p>
+            <p className="text-xs text-gray-500 mb-6">
+              Esta seção aplica-se a titulares de dados localizados no Espaço Econômico Europeu (EEE),
+              conforme exigido pelos Artigos 13 e 14 do GDPR (Regulamento UE 2016/679).
+            </p>
+
+            <Section title="12. Controlador de dados (GDPR Art. 13.1.a)">
+              <div className="flex flex-col gap-0.5">
+                <span><strong>Controlador:</strong> {COMPANY}</span>
+                <span><strong>CNPJ:</strong> {CNPJ}</span>
+                <span><strong>País:</strong> Brasil</span>
+                <span>
+                  <strong>Contato DPO:</strong>{" "}
+                  <a href={`mailto:${EMAIL_DPO}`} className="text-[#153ece] underline">{EMAIL_DPO}</a>
+                </span>
+              </div>
+            </Section>
+
+            <Section title="13. Finalidade e base legal do tratamento (GDPR Art. 13.1.c / Art. 6)">
+              <Table
+                headers={["Dado", "Finalidade", "Base legal (GDPR Art. 6)"]}
+                rows={[
+                  ["E-mail e senha", "Autenticação do usuário", "Art. 6(1)(b) — execução de contrato"],
+                  ["Nome, cargo, empresa", "Identificação e personalização da interface", "Art. 6(1)(b) — execução de contrato"],
+                  ["Foto de perfil", "Exibição no avatar", "Art. 6(1)(a) — consentimento"],
+                  ["Token de sessão (localStorage)", "Manter sessão autenticada por 8 horas", "Art. 6(1)(b) — execução de contrato"],
+                  ["Dados geográficos agregados (país, estado)", "Relatórios de distribuição geográfica de campanhas", "Art. 6(1)(f) — interesse legítimo"],
+                  ["Dados de performance (impressões, cliques)", "Relatórios de performance publicitária", "Art. 6(1)(b) — execução de contrato"],
+                ]}
+              />
+              <p className="mt-2 text-xs text-gray-500">
+                <strong>Interesse legítimo (Art. 6.1.f):</strong> os dados geográficos agregados são necessários
+                para a prestação do serviço de relatórios contratado pelos anunciantes. Estes dados não identificam
+                individualmente nenhum usuário final.
+              </p>
+            </Section>
+
+            <Section title="14. Destinatários dos dados (GDPR Art. 13.1.e)">
+              <ul className="list-disc pl-5 flex flex-col gap-1">
+                <li><strong>Railway (EUA)</strong> — autenticação e perfil de usuário</li>
+                <li><strong>Vercel (EUA)</strong> — hospedagem da API</li>
+                <li><strong>Google BigQuery / Google Sheets (EUA)</strong> — dados agregados de campanhas</li>
+              </ul>
+              <p className="mt-2">
+                Nenhum dado é compartilhado com terceiros para fins de marketing, publicidade comportamental
+                ou venda de dados.
+              </p>
+            </Section>
+
+            <Section title="15. Transferências para países terceiros (GDPR Art. 13.1.f)">
+              <p>
+                Os dados são transferidos para os Estados Unidos da América. As transferências são realizadas
+                com base nas seguintes salvaguardas adequadas (GDPR Art. 46):
+              </p>
+              <ul className="list-disc pl-5 mt-2 flex flex-col gap-1">
+                <li><strong>Google:</strong> Standard Contractual Clauses (SCCs) + EU-U.S. Data Privacy Framework</li>
+                <li><strong>Vercel:</strong> Data Processing Agreement (DPA) com SCCs</li>
+                <li><strong>Railway:</strong> Data Processing Agreement (DPA) com criptografia em trânsito e repouso</li>
+              </ul>
+            </Section>
+
+            <Section title="16. Prazo de retenção (GDPR Art. 13.2.a)">
+              <Table
+                headers={["Dado", "Prazo de retenção"]}
+                rows={[
+                  ["Token de sessão (localStorage)", "8 horas ou até logout"],
+                  ["Perfil de usuário (Railway API)", "Enquanto a conta estiver ativa"],
+                  ["Dados agregados de campanhas (BigQuery)", "Até 24 meses"],
+                  ["Preferência de tema (localStorage)", "Indefinido — não contém dados pessoais"],
+                ]}
+              />
+            </Section>
+
+            <Section title="17. Decisões automatizadas e profiling (GDPR Art. 13.2.f)">
+              <p>
+                Esta plataforma <strong>não realiza decisões automatizadas</strong> nem criação de perfis
+                comportamentais (<em>profiling</em>) de usuários finais conforme definido no Art. 22 do GDPR.
+                O targeting de anúncios é exclusivamente contextual (zona, site, campanha e data),
+                sem análise de histórico de navegação ou preferências individuais.
+              </p>
+            </Section>
+
+            <Section title="18. Direitos dos titulares sob o GDPR (Art. 13.2.b / Art. 15–21)">
+              <p>Titulares de dados no EEE têm direito a:</p>
+              <ul className="list-disc pl-5 mt-2 flex flex-col gap-1">
+                <li><strong>Acesso (Art. 15)</strong> — obter cópia dos dados pessoais tratados</li>
+                <li><strong>Retificação (Art. 16)</strong> — corrigir dados inexatos ou incompletos</li>
+                <li><strong>Apagamento / "Direito ao esquecimento" (Art. 17)</strong> — solicitar exclusão dos dados</li>
+                <li><strong>Limitação do tratamento (Art. 18)</strong> — restringir o uso dos dados em determinadas circunstâncias</li>
+                <li><strong>Portabilidade (Art. 20)</strong> — receber os dados em formato estruturado e legível por máquina</li>
+                <li><strong>Oposição (Art. 21)</strong> — opor-se ao tratamento baseado em interesse legítimo</li>
+                <li><strong>Revogação do consentimento (Art. 7.3)</strong> — retirar o consentimento a qualquer momento, sem prejuízo da licitude do tratamento anterior</li>
+              </ul>
+              <p className="mt-2">
+                Para exercer qualquer desses direitos, entre em contato:{" "}
+                <a href={`mailto:${EMAIL_DPO}`} className="text-[#153ece] underline">{EMAIL_DPO}</a>
+              </p>
+              <p className="mt-2 text-xs text-gray-500">
+                Responderemos no prazo máximo de <strong>30 dias</strong> (prorrogável por mais 60 dias
+                em casos complexos, com aviso prévio), conforme Art. 12.3 do GDPR.
+              </p>
+            </Section>
+
+            <Section title="19. Direito de reclamação à autoridade supervisora (GDPR Art. 13.2.d)">
+              <p>
+                Titulares de dados no EEE têm o direito de apresentar reclamação à autoridade supervisora
+                de proteção de dados competente no seu país de residência. Lista de autoridades:
+              </p>
+              <p className="mt-2">
+                <a
+                  href="https://edpb.europa.eu/about-edpb/about-edpb/members_en"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#153ece] underline"
+                >
+                  edpb.europa.eu — Lista de autoridades supervisoras do EEE
+                </a>
+              </p>
+              <p className="mt-2 text-xs text-gray-500">
+                No Brasil, reclamações podem ser registradas perante a{" "}
+                <strong>Autoridade Nacional de Proteção de Dados (ANPD)</strong> em{" "}
+                <strong>gov.br/anpd</strong>.
+              </p>
+            </Section>
+          </div>
+
+          <Section title="20. Contato e Encarregado (DPO)">
             <p>
               Dúvidas, solicitações ou reclamações relacionadas à privacidade de dados devem ser
               encaminhadas para:
@@ -164,11 +324,6 @@ export default function PrivacyPolicy() {
                 <a href={`mailto:${EMAIL_DPO}`} className="text-[#153ece] underline">{EMAIL_DPO}</a>
               </span>
             </div>
-            <p className="mt-3 text-xs text-gray-400">
-              Você também pode registrar reclamações perante a{" "}
-              <strong>Autoridade Nacional de Proteção de Dados (ANPD)</strong> pelo portal{" "}
-              <strong>gov.br/anpd</strong>.
-            </p>
           </Section>
         </div>
       </div>
