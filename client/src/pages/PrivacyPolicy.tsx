@@ -75,7 +75,7 @@ export default function PrivacyPolicy() {
             <p>Os dados trafegam entre as seguintes plataformas, todas sob controle da {COMPANY}:</p>
             <ul className="list-disc pl-5 mt-2 flex flex-col gap-1">
               <li><strong>api-prod-goon-app.up.railway.app</strong> — autenticação e perfil do usuário</li>
-              <li><strong>adserver-api.vercel.app</strong> — relatórios de campanhas publicitárias</li>
+              <li><strong>api-adserver.crmaddesk.com</strong> — relatórios de campanhas publicitárias</li>
               <li><strong>Google BigQuery</strong> (go-on-adgroup.adserver) — dados consolidados de viewability e VAST</li>
               <li><strong>Google Sheets</strong> — planilha de controle de campanhas (agência, veículo, datas)</li>
             </ul>

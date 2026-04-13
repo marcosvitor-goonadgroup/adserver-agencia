@@ -1,4 +1,4 @@
-const API_BASE = "https://adserver-api.vercel.app";
+const API_BASE = "https://api-adserver.crmaddesk.com";
 
 export interface Campaign {
   id: number;

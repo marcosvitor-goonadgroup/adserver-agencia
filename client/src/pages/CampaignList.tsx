@@ -49,7 +49,7 @@ export default function CampaignList() {
       try {
         const [sheetRows, campaignsRes] = await Promise.all([
           fetchSheetCampaignData(),
-          fetch("https://adserver-api.vercel.app/campaigns").then((r) => r.json()).catch(() => []),
+          fetch("https://api-adserver.crmaddesk.com/campaigns").then((r) => r.json()).catch(() => []),
         ]);
 
         const empresaNome = user?.empresa?.nome_fantasia?.toLowerCase() ?? null;
