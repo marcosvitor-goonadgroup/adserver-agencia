@@ -60,9 +60,10 @@ export default function PrivacyPolicy() {
 
           <Section title="3. Como armazenamos seus dados">
             <p>
-              O token de autenticação e o identificador de empresa são armazenados no <strong>localStorage</strong> do seu navegador,
-              com validade máxima de <strong>8 horas</strong>. Após esse prazo, ou ao clicar em "Sair",
-              todos os dados locais são removidos automaticamente.
+              O token de autenticação e o identificador de empresa são armazenados no <strong>sessionStorage</strong> do seu navegador,
+              com validade máxima de <strong>8 horas</strong>. O <strong>sessionStorage</strong> é apagado automaticamente
+              ao fechar a aba/janela do navegador. Após o prazo de 8 horas, ou ao clicar em "Sair",
+              todos os dados locais também são removidos imediatamente.
             </p>
             <p className="mt-2">
               Nenhum dado pessoal é gravado em banco de dados próprio do AD Desk. As informações de perfil
@@ -94,6 +95,14 @@ export default function PrivacyPolicy() {
               Os dados de anunciantes (nome e e-mail) são utilizados exclusivamente para identificação interna
               das campanhas no painel e não são exibidos publicamente.
             </p>
+            <p className="mt-2">
+              <strong>Opt-out de medição:</strong> a medição de impressões e viewability não utiliza cookies nem
+              identificadores de usuário. Respeitamos os sinais de opt-out do navegador — <strong>Do Not Track (DNT)</strong> e{" "}
+              <strong>Global Privacy Control (GPC)</strong>: quando ativados, nenhum dado de medição é registrado.
+              O endereço IP é utilizado apenas transitoriamente para derivar a localização aproximada (país/estado/cidade)
+              e não é armazenado. Você também pode solicitar oposição pelo e-mail{" "}
+              <a href={`mailto:${EMAIL_DPO}`} className="text-[#153ece] underline">{EMAIL_DPO}</a>.
+            </p>
           </Section>
 
           <Section title="6. Seus direitos (LGPD – Lei nº 13.709/2018)">
@@ -123,7 +132,7 @@ export default function PrivacyPolicy() {
               <li>O token é removido imediatamente ao clicar em "Sair"</li>
             </ul>
             <p className="mt-2 text-gray-500 text-xs">
-              Nota: o token de sessão é armazenado no localStorage do navegador.
+              Nota: o token de sessão é armazenado no sessionStorage do navegador.
               Recomendamos não utilizar a plataforma em computadores compartilhados sem efetuar logout ao final.
             </p>
           </Section>
@@ -210,7 +219,7 @@ export default function PrivacyPolicy() {
                   ["E-mail e senha", "Autenticação do usuário", "Art. 6(1)(b) — execução de contrato"],
                   ["Nome, cargo, empresa", "Identificação e personalização da interface", "Art. 6(1)(b) — execução de contrato"],
                   ["Foto de perfil", "Exibição no avatar", "Art. 6(1)(a) — consentimento"],
-                  ["Token de sessão (localStorage)", "Manter sessão autenticada por 8 horas", "Art. 6(1)(b) — execução de contrato"],
+                  ["Token de sessão (sessionStorage)", "Manter sessão autenticada por 8 horas", "Art. 6(1)(b) — execução de contrato"],
                   ["Dados geográficos agregados (país, estado)", "Relatórios de distribuição geográfica de campanhas", "Art. 6(1)(f) — interesse legítimo"],
                   ["Dados de performance (impressões, cliques)", "Relatórios de performance publicitária", "Art. 6(1)(b) — execução de contrato"],
                 ]}
@@ -250,10 +259,10 @@ export default function PrivacyPolicy() {
               <Table
                 headers={["Dado", "Prazo de retenção"]}
                 rows={[
-                  ["Token de sessão (localStorage)", "8 horas ou até logout"],
+                  ["Token de sessão (sessionStorage)", "8 horas ou até logout"],
                   ["Perfil de usuário (Railway API)", "Enquanto a conta estiver ativa"],
                   ["Dados agregados de campanhas (BigQuery)", "Até 24 meses"],
-                  ["Preferência de tema (localStorage)", "Indefinido — não contém dados pessoais"],
+                  ["Preferência de tema (sessionStorage)", "Indefinido — não contém dados pessoais"],
                 ]}
               />
             </Section>

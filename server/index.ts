@@ -19,11 +19,11 @@ async function startServer() {
 
   app.use(express.static(staticPath));
 
-  // Proxy /api/* → https://adserver-api.vercel.app/*
+  // Proxy /api/* → https://api-adserver.crmaddesk.com/*
   app.use(
     "/api",
     createProxyMiddleware({
-      target: "https://adserver-api.vercel.app",
+      target: "https://api-adserver.crmaddesk.com",
       changeOrigin: true,
       pathRewrite: { "^/api": "" },
     })

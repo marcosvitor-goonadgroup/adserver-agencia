@@ -30,15 +30,15 @@ const EXPIRY_KEY = "addesk_expiry";
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 horas
 
 function isSessionExpired(): boolean {
-  const expiry = localStorage.getItem(EXPIRY_KEY);
+  const expiry = sessionStorage.getItem(EXPIRY_KEY);
   if (!expiry) return true;
   return Date.now() > Number(expiry);
 }
 
 function clearSession() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(EMPRESA_KEY);
-  localStorage.removeItem(EXPIRY_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(EMPRESA_KEY);
+  sessionStorage.removeItem(EXPIRY_KEY);
 }
 
 async function fetchMe(token: string, empresaId: number): Promise<UserMe> {
@@ -56,16 +56,16 @@ async function fetchMe(token: string, empresaId: number): Promise<UserMe> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => {
     if (isSessionExpired()) { clearSession(); return null; }
-    return localStorage.getItem(TOKEN_KEY);
+    return sessionStorage.getItem(TOKEN_KEY);
   });
   const [empresaId, setEmpresaId] = useState<number | null>(() => {
     if (isSessionExpired()) return null;
-    const v = localStorage.getItem(EMPRESA_KEY);
+    const v = sessionStorage.getItem(EMPRESA_KEY);
     return v ? Number(v) : null;
   });
   const [user, setUser] = useState<UserMe | null>(null);
   const [loadingUser, setLoadingUser] = useState<boolean>(
-    !isSessionExpired() && !!localStorage.getItem(TOKEN_KEY) && !!localStorage.getItem(EMPRESA_KEY)
+    !isSessionExpired() && !!sessionStorage.getItem(TOKEN_KEY) && !!sessionStorage.getItem(EMPRESA_KEY)
   );
 
   useEffect(() => {
@@ -90,9 +90,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token, empresaId]);
 
   function login(t: string, eId: number) {
-    localStorage.setItem(TOKEN_KEY, t);
-    localStorage.setItem(EMPRESA_KEY, String(eId));
-    localStorage.setItem(EXPIRY_KEY, String(Date.now() + SESSION_TTL_MS));
+    sessionStorage.setItem(TOKEN_KEY, t);
+    sessionStorage.setItem(EMPRESA_KEY, String(eId));
+    sessionStorage.setItem(EXPIRY_KEY, String(Date.now() + SESSION_TTL_MS));
     setEmpresaId(eId);
     setToken(t);
   }

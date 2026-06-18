@@ -11,7 +11,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   url.searchParams.delete("path");
   const search = url.search;
 
-  const target = `https://adserver-api.vercel.app/${pathname}${search}`;
+  const target = `https://api-adserver.crmaddesk.com/${pathname}${search}`;
 
   const upstream = await fetch(target, {
     method: req.method,

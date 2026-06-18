@@ -182,7 +182,7 @@ export default defineConfig({
     ],
     proxy: {
       "/api": {
-        target: "https://adserver-api.vercel.app",
+        target: "https://api-adserver.crmaddesk.com",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
       },
